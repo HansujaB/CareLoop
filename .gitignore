@@ -1,0 +1,17 @@
+.env
+.env.local
+*.pyc
+__pycache__/
+.venv/
+venv/
+node_modules/
+.expo/
+dist/
+mobile/.expo/
+mobile/node_modules/
+*.pem
+firebase-service-account.json
+serviceAccountKey.json
+CLAUDE.md
+AGENTS.md
+SKILLS.md
