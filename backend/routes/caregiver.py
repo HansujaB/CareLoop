@@ -8,7 +8,7 @@ from models.schemas import (
     HandoverResponse,
 )
 from services import care_memory, firebase
-from services.cognee import CogneeError
+from services.mem0 import Mem0Error
 from services.firebase import FirestoreError
 from services.groq import GroqError
 
@@ -46,7 +46,7 @@ async def caregiver_handover(
     profile_id = await _profile_from_token(x_caregiver_token)
     try:
         summary = await care_memory.generate_handover(profile_id)
-    except (CogneeError, GroqError) as exc:
+    except (Mem0Error, GroqError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return HandoverResponse(summary=summary)
 
@@ -59,7 +59,7 @@ async def caregiver_chat(
     profile_id = await _profile_from_token(x_caregiver_token)
     try:
         answer = await care_memory.answer_question(profile_id, body.question)
-    except (CogneeError, GroqError) as exc:
+    except (Mem0Error, GroqError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return ChatResponse(answer=answer)
 
@@ -71,6 +71,6 @@ async def caregiver_emergency(
     profile_id = await _profile_from_token(x_caregiver_token)
     try:
         content = await care_memory.generate_emergency_card(profile_id)
-    except (CogneeError, GroqError) as exc:
+    except (Mem0Error, GroqError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return EmergencyCardResponse(content=content)

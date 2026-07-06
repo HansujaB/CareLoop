@@ -2,7 +2,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from models.schemas import RememberResponse
 from services import care_memory, firebase, groq
-from services.cognee import CogneeError
+from services.mem0 import Mem0Error
 from services.firebase import FirestoreError
 from services.groq import GroqError
 
@@ -40,7 +40,7 @@ async def ingest_voice(
         await care_memory.remember_for_profile(profile_id, text)
     except GroqError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    except CogneeError as exc:
+    except Mem0Error as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return RememberResponse(message="Voice note saved to care memory.")

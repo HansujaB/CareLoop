@@ -1,9 +1,9 @@
-"""High-level care memory flows: recall from Cognee, phrase with Groq."""
+"""High-level care memory flows: recall from Mem0, phrase with Groq."""
 
 from __future__ import annotations
 
-from config import dataset_name
-from services import cognee, groq
+from config import mem0_user_id
+from services import mem0, groq
 
 HANDOVER_QUERY = (
     "What should a caregiver know before starting a shift? Include allergies, "
@@ -37,11 +37,11 @@ EMERGENCY_SYSTEM = (
 
 
 async def remember_for_profile(profile_id: str, text: str) -> None:
-    await cognee.remember_text(text, dataset_name(profile_id))
+    await mem0.remember_text(text, mem0_user_id(profile_id))
 
 
 async def answer_question(profile_id: str, question: str) -> str:
-    context = await cognee.recall(question, dataset_name(profile_id))
+    context = await mem0.recall(question, mem0_user_id(profile_id))
     if not context:
         return "I don't have that information in the care profile yet."
     return await groq.phrase_response(
@@ -51,7 +51,7 @@ async def answer_question(profile_id: str, question: str) -> str:
 
 
 async def generate_handover(profile_id: str) -> str:
-    context = await cognee.recall(HANDOVER_QUERY, dataset_name(profile_id))
+    context = await mem0.recall(HANDOVER_QUERY, mem0_user_id(profile_id))
     if not context:
         return (
             "No care information has been added to this profile yet. "
@@ -65,7 +65,7 @@ async def generate_handover(profile_id: str) -> str:
 
 
 async def generate_emergency_card(profile_id: str) -> str:
-    context = await cognee.recall(EMERGENCY_QUERY, dataset_name(profile_id))
+    context = await mem0.recall(EMERGENCY_QUERY, mem0_user_id(profile_id))
     if not context:
         return "No emergency information available yet."
     return await groq.phrase_response(

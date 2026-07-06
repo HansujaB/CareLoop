@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
     title="CareLoop API",
-    description="Backend for CareLoop — care memory powered by Cognee Cloud.",
+    description="Backend for CareLoop — AI-powered care memory for caregivers.",
     version="0.1.0",
 )
 

@@ -4,8 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    cognee_api_key: str = ""
-    cognee_base_url: str = "https://api.cognee.ai"
+    mem0_api_key: str = ""
 
     groq_api_key: str = ""
     groq_llm_model: str = "openai/gpt-oss-20b"
@@ -18,5 +17,6 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-def dataset_name(profile_id: str) -> str:
-    return f"{profile_id}_profile"
+def mem0_user_id(profile_id: str) -> str:
+    """Returns the Mem0 user_id to scope memories to a care profile."""
+    return f"profile_{profile_id}"

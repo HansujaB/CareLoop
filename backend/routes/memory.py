@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 
 from models.schemas import RememberResponse, RememberTextRequest
-from services import care_memory, cognee, firebase
-from services.cognee import CogneeError
+from services import care_memory, firebase
+from services.mem0 import Mem0Error
 from services.firebase import FirestoreError
 
 router = APIRouter(prefix="/profiles/{profile_id}", tags=["memory"])
@@ -22,6 +22,6 @@ async def remember_text(profile_id: str, body: RememberTextRequest) -> RememberR
     await _require_profile(profile_id)
     try:
         await care_memory.remember_for_profile(profile_id, body.text)
-    except CogneeError as exc:
+    except Mem0Error as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return RememberResponse()
