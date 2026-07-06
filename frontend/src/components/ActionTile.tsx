@@ -1,10 +1,10 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons, { glyphMap } from "@/components/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 
 type Props = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof glyphMap;
   title: string;
   subtitle: string;
   onPress?: () => void;

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons, { glyphMap } from "@/components/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PressableScale } from "@/components/ui/PressableScale";
@@ -30,7 +30,7 @@ type TabBarProps = {
   };
 };
 
-const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+const TAB_ICONS: Record<string, keyof typeof glyphMap> = {
   index: "home-outline",
   memory: "mic-outline",
   links: "link-outline",
