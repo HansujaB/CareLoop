@@ -1,0 +1,75 @@
+"""High-level care memory flows: recall from Cognee, phrase with Groq."""
+
+from __future__ import annotations
+
+from config import dataset_name
+from services import cognee, groq
+
+HANDOVER_QUERY = (
+    "What should a caregiver know before starting a shift? Include allergies, "
+    "medications and timings, routines, nap schedule, behavioral notes, and any "
+    "recent updates or incidents."
+)
+
+EMERGENCY_QUERY = (
+    "List all emergency information: allergies, current medications, blood group, "
+    "emergency contacts with phone numbers, and any critical medical instructions."
+)
+
+HANDOVER_SYSTEM = (
+    "You write shift handover briefings for caregivers. Use only the provided context. "
+    "Write one coherent paragraph in a warm, spoken tone — like a parent quickly "
+    "briefing a babysitter. Do not use bullet points or headers. If something is "
+    "missing from context, omit it rather than guessing."
+)
+
+CHAT_SYSTEM = (
+    "You are a care assistant for a caregiver on shift. Answer using only the provided "
+    "context. Be concise, practical, and friendly. If the context does not contain the "
+    "answer, say you do not have that information in the care profile."
+)
+
+EMERGENCY_SYSTEM = (
+    "Format emergency card information clearly for a caregiver. Use short labeled sections "
+    "(Allergies, Medications, Blood group, Emergency contacts, Critical instructions). "
+    "Use only the provided context. Omit sections with no data."
+)
+
+
+async def remember_for_profile(profile_id: str, text: str) -> None:
+    await cognee.remember_text(text, dataset_name(profile_id))
+
+
+async def answer_question(profile_id: str, question: str) -> str:
+    context = await cognee.recall(question, dataset_name(profile_id))
+    if not context:
+        return "I don't have that information in the care profile yet."
+    return await groq.phrase_response(
+        system_prompt=CHAT_SYSTEM,
+        user_prompt=f"Context:\n{context}\n\nQuestion: {question}",
+    )
+
+
+async def generate_handover(profile_id: str) -> str:
+    context = await cognee.recall(HANDOVER_QUERY, dataset_name(profile_id))
+    if not context:
+        return (
+            "No care information has been added to this profile yet. "
+            "Ask the parent to add details before your shift."
+        )
+    return await groq.phrase_response(
+        system_prompt=HANDOVER_SYSTEM,
+        user_prompt=f"Context:\n{context}",
+        max_tokens=500,
+    )
+
+
+async def generate_emergency_card(profile_id: str) -> str:
+    context = await cognee.recall(EMERGENCY_QUERY, dataset_name(profile_id))
+    if not context:
+        return "No emergency information available yet."
+    return await groq.phrase_response(
+        system_prompt=EMERGENCY_SYSTEM,
+        user_prompt=f"Context:\n{context}",
+        max_tokens=400,
+    )
