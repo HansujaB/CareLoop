@@ -99,8 +99,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radius.xxl,
     padding: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
     ...shadows.float,
   },
   tab: {

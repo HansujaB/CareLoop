@@ -7,6 +7,7 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { Screen } from "@/components/ui/Screen";
 import { TextField } from "@/components/ui/TextField";
 import { useSession } from "@/context/SessionContext";
+import { api } from "@/services/api";
 import { colors, spacing, typography } from "@/constants/theme";
 
 const MODES = [
@@ -15,19 +16,35 @@ const MODES = [
 ];
 
 export default function MemoryScreen() {
-  const { profileName } = useSession();
+  const { profileId, profileName } = useSession();
   const [mode, setMode] = useState("text");
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
 
-  const saveMemory = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const saveMemory = async () => {
+    if (!text.trim() || !profileId || saving) return;
+    setSaving(true);
+    setStatus("idle");
+    try {
+      await api.rememberText(profileId, text.trim());
+      setStatus("saved");
+      setText("");
+      setTimeout(() => setStatus("idle"), 3000);
+    } catch {
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 3000);
+    } finally {
+      setSaving(false);
+    }
   };
 
+  const buttonLabel =
+    status === "saved" ? "Saved ✓" : status === "error" ? "Save failed — retry" : saving ? "Saving…" : "Save to care memory";
+
   return (
-    <Screen navTitle="Add memory" navSubtitle={`Updates ${profileName}'s care graph`}>
+    <Screen navTitle="Add memory" navSubtitle={`Updates ${profileName || "the care profile"}`}>
       <ChipGroup items={MODES} selectedKey={mode} onSelect={setMode} />
 
       {mode === "text" ? (
@@ -36,13 +53,13 @@ export default function MemoryScreen() {
           <TextField
             value={text}
             onChangeText={setText}
-            placeholder="Aryan is allergic to peanuts. Inhaler at 2pm daily..."
+            placeholder="Has a peanut allergy. Takes inhaler at 2pm daily..."
             multiline
             style={styles.textArea}
-            hint="Tip: speak naturally — Cognee builds the graph for you."
+            hint="Tip: speak naturally — the AI builds the memory graph for you."
           />
           <PrimaryButton
-            label={saved ? "Saved to memory" : "Save to care memory"}
+            label={buttonLabel}
             onPress={saveMemory}
             icon={<Ionicons name="cloud-upload-outline" size={18} color={colors.white} />}
           />
@@ -56,7 +73,7 @@ export default function MemoryScreen() {
             {recording ? "Listening…" : "Tap to record a care update"}
           </Text>
           <Text style={styles.voiceHint}>
-            Groq Whisper transcribes, then Cognee remember() updates the graph.
+            Groq Whisper transcribes your voice, then saves it to the care memory.
           </Text>
           <PrimaryButton
             label={recording ? "Stop recording" : "Start recording"}

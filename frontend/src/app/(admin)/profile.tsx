@@ -29,7 +29,7 @@ export default function AdminProfileScreen() {
       <ActionTile
         icon="cloud-upload-outline"
         title="Upload medical record"
-        subtitle="PDF or image → OCR → Cognee"
+        subtitle="PDF or image → OCR → Care memory"
         onPress={() => router.push("/(admin)/upload")}
       />
       <ActionTile

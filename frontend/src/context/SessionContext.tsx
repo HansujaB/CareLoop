@@ -1,5 +1,4 @@
 import { createContext, useContext, useMemo, useState } from "react";
-import { DEMO_PROFILE } from "@/constants/demo";
 
 type Role = "none" | "admin" | "caregiver";
 
@@ -22,8 +21,8 @@ const SessionContext = createContext<SessionState | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role>("none");
-  const [profileId, setProfileId] = useState<string | null>(DEMO_PROFILE.profileId);
-  const [profileName, setProfileName] = useState(DEMO_PROFILE.name);
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState("");
   const [caregiverToken, setCaregiverToken] = useState<string | null>(null);
   const [caregiverName, setCaregiverName] = useState<string | null>(null);
   const [hasOnboarded, setHasOnboarded] = useState(false);
@@ -46,6 +45,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       completeOnboarding: () => setHasOnboarded(true),
       resetSession: () => {
         setRole("none");
+        setProfileId(null);
+        setProfileName("");
         setCaregiverToken(null);
         setCaregiverName(null);
       },

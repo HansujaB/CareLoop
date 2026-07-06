@@ -1,11 +1,12 @@
 import Ionicons from "@/components/Ionicons";
-import { useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import { Card } from "@/components/ui/Card";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SecondaryButton } from "@/components/ui/SecondaryButton";
 import { Screen } from "@/components/ui/Screen";
 import { useSession } from "@/context/SessionContext";
+import { api } from "@/services/api";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 
 type LinkItem = {
@@ -16,40 +17,51 @@ type LinkItem = {
   caregiver_name?: string | null;
 };
 
-const DEMO_LINKS: LinkItem[] = [
-  {
-    link_id: "1",
-    token: "demo-token-nanny",
-    url: "careloop://c/demo-token-nanny",
-    status: "active",
-    caregiver_name: "Sam",
-  },
-];
-
 export default function LinksScreen() {
-  const { profileName } = useSession();
-  const [links, setLinks] = useState(DEMO_LINKS);
+  const { profileId, profileName } = useSession();
+  const [links, setLinks] = useState<LinkItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const generateLink = () => {
-    const token = `link-${Date.now().toString(36)}`;
-    setLinks((prev) => [
-      {
-        link_id: String(prev.length + 1),
-        token,
-        url: `careloop://c/${token}`,
-        status: "active",
-      },
-      ...prev,
-    ]);
+  const loadLinks = useCallback(async () => {
+    if (!profileId) return;
+    try {
+      const data = await api.listLinks(profileId);
+      setLinks(data);
+    } catch {
+      // silent — empty list shown
+    } finally {
+      setLoading(false);
+    }
+  }, [profileId]);
+
+  useEffect(() => { loadLinks(); }, [loadLinks]);
+
+  const generateLink = async () => {
+    if (!profileId || generating) return;
+    setGenerating(true);
+    try {
+      const link = await api.createLink(profileId);
+      setLinks((prev) => [link, ...prev]);
+    } catch {
+      // ignore for now
+    } finally {
+      setGenerating(false);
+    }
   };
 
-  const revokeLink = (linkId: string) => {
-    setLinks((prev) => prev.filter((l) => l.link_id !== linkId));
+  const revokeLink = async (linkId: string) => {
+    if (!profileId) return;
+    try {
+      await api.revokeLink(profileId, linkId);
+      setLinks((prev) => prev.filter((l) => l.link_id !== linkId));
+    } catch {
+      // ignore
+    }
   };
 
   const shareLink = async (url: string) => {
-    // On web, copy to clipboard; on native, use Share
     if (Platform.OS === "web") {
       try {
         await navigator.clipboard.writeText(
@@ -69,13 +81,18 @@ export default function LinksScreen() {
   return (
     <Screen navTitle="Caregiver links" navSubtitle="No login required for caregivers">
       <PrimaryButton
-        label="Generate new link"
+        label={generating ? "Generating…" : "Generate new link"}
         onPress={generateLink}
         icon={<Ionicons name="add-outline" size={18} color={colors.white} />}
       />
 
       <Text style={styles.sectionTitle}>Active links</Text>
-      {links.length === 0 ? (
+
+      {loading ? (
+        <Card soft padding="md" style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
+        </Card>
+      ) : links.length === 0 ? (
         <Card soft padding="md">
           <Text style={styles.empty}>No active links. Generate one for your caregiver.</Text>
         </Card>
@@ -88,7 +105,7 @@ export default function LinksScreen() {
               </View>
               <View style={styles.linkText}>
                 <Text style={styles.linkTitle}>
-                  {link.caregiver_name ? link.caregiver_name : "Unused link"}
+                  {link.caregiver_name ?? "Unused link"}
                 </Text>
                 <Text style={styles.linkUrl} numberOfLines={1}>
                   {link.url}
@@ -122,6 +139,7 @@ export default function LinksScreen() {
 const styles = StyleSheet.create({
   sectionTitle: { ...typography.h3, color: colors.text, marginTop: spacing.lg, marginBottom: spacing.sm },
   empty: { ...typography.body, color: colors.textSecondary },
+  center: { alignItems: "center", justifyContent: "center", minHeight: 80 },
   linkCard: { marginBottom: spacing.sm, gap: spacing.md },
   linkHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   linkIcon: {

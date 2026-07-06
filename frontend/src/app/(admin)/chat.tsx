@@ -1,35 +1,76 @@
 import Ionicons from "@/components/Ionicons";
-import { useState } from "react";
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Card } from "@/components/ui/Card";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { Screen } from "@/components/ui/Screen";
-import { DEMO_CHAT } from "@/constants/demo";
+import { useSession } from "@/context/SessionContext";
+import { api } from "@/services/api";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 
 type Message = { id: string; role: "user" | "assistant"; text: string };
 
-export default function ChatScreen() {
-  const [messages, setMessages] = useState<Message[]>(DEMO_CHAT);
-  const [input, setInput] = useState("");
+const GREETING: Message = {
+  id: "0",
+  role: "assistant",
+  text: "Hi! Ask me anything about the care profile — allergies, routines, medications, and more.",
+};
 
-  const send = () => {
+export default function ChatScreen() {
+  const { profileId } = useSession();
+  const [messages, setMessages] = useState<Message[]>([GREETING]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
+
+  const send = async () => {
     const question = input.trim();
-    if (!question) return;
+    if (!question || sending || !profileId) return;
 
     const userMsg: Message = { id: Date.now().toString(), role: "user", text: question };
-    const answer: Message = {
-      id: `${Date.now()}-a`,
-      role: "assistant",
-      text: "Based on the care profile, I'll help with that once connected to the backend recall endpoint.",
-    };
-    setMessages((prev) => [...prev, userMsg, answer]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setSending(true);
+
+    try {
+      const res = await api.chat(profileId, question);
+      const assistantMsg: Message = {
+        id: `${Date.now()}-a`,
+        role: "assistant",
+        text: res.answer,
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch {
+      const errMsg: Message = {
+        id: `${Date.now()}-err`,
+        role: "assistant",
+        text: "Sorry, I couldn't reach the care memory right now. Please try again.",
+      };
+      setMessages((prev) => [...prev, errMsg]);
+    } finally {
+      setSending(false);
+    }
   };
 
+  useEffect(() => {
+    if (messages.length > 1) {
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  }, [messages]);
+
   return (
-    <Screen navTitle="Care assistant" navSubtitle="Ask natural questions" bottomInset={120} scroll={false}>
+    <Screen navTitle="Care assistant" navSubtitle="Ask about the care profile" bottomInset={120} scroll={false}>
       <FlatList
+        ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
@@ -54,12 +95,19 @@ export default function ChatScreen() {
           <TextInput
             value={input}
             onChangeText={setInput}
-            placeholder="What time is the inhaler?"
+            placeholder="What time is the medication?"
             placeholderTextColor={colors.textMuted}
             style={styles.input}
+            editable={!sending}
+            onSubmitEditing={send}
+            returnKeyType="send"
           />
-          <PressableScale onPress={send} style={styles.sendBtn}>
-            <Ionicons name="send" size={18} color={colors.white} />
+          <PressableScale onPress={send} style={[styles.sendBtn, sending && styles.sendBtnDisabled]}>
+            {sending ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Ionicons name="send" size={18} color={colors.white} />
+            )}
           </PressableScale>
         </View>
       </KeyboardAvoidingView>
@@ -102,5 +150,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
+  },
+  sendBtnDisabled: {
+    opacity: 0.6,
   },
 });

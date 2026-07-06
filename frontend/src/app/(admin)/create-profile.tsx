@@ -1,22 +1,33 @@
 import Ionicons from "@/components/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { Screen } from "@/components/ui/Screen";
 import { TextField } from "@/components/ui/TextField";
 import { useSession } from "@/context/SessionContext";
+import { api } from "@/services/api";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function CreateProfileScreen() {
   const { setProfile } = useSession();
   const [name, setName] = useState("");
-  const [age, setAge] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const createProfile = () => {
-    if (!name.trim()) return;
-    setProfile("demo-profile", name.trim());
-    router.replace("/(admin)/memory");
+  const createProfile = async () => {
+    if (!name.trim() || creating) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const profile = await api.createProfile(name.trim());
+      setProfile(profile.profile_id, profile.name);
+      router.replace("/(admin)/memory");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to create profile. Try again.");
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -24,23 +35,22 @@ export default function CreateProfileScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Create care profile</Text>
         <Text style={styles.subtitle}>
-          One profile per child or dependent. Care memory lives in Cognee.
+          One profile per child or dependent. Their care knowledge lives here.
         </Text>
       </View>
 
-      <TextField label="Name" value={name} onChangeText={setName} placeholder="Aryan" />
-      <TextField
-        label="Age (optional)"
-        value={age}
-        onChangeText={setAge}
-        placeholder="4"
-        keyboardType="number-pad"
-      />
+      <TextField label="Name" value={name} onChangeText={setName} placeholder="Your child's name" />
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <PrimaryButton
-        label="Create profile"
+        label={creating ? "Creating…" : "Create profile"}
         onPress={createProfile}
-        icon={<Ionicons name="heart-outline" size={18} color={colors.white} />}
+        icon={
+          creating
+            ? <ActivityIndicator size="small" color={colors.white} />
+            : <Ionicons name="heart-outline" size={18} color={colors.white} />
+        }
       />
     </Screen>
   );
@@ -50,4 +60,5 @@ const styles = StyleSheet.create({
   header: { gap: spacing.sm, marginBottom: spacing.lg, marginTop: spacing.xl },
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.body, color: colors.textSecondary },
+  error: { ...typography.bodySmall, color: colors.danger, marginBottom: spacing.sm },
 });

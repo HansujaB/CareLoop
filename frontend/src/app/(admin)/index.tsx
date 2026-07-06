@@ -1,28 +1,42 @@
 import Ionicons from "@/components/Ionicons";
+import { useEffect, useState } from "react";
 import { router } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { ActionTile } from "@/components/ActionTile";
 import { SummaryCard } from "@/components/SummaryCard";
 import { Card } from "@/components/ui/Card";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { Screen } from "@/components/ui/Screen";
 import { useSession } from "@/context/SessionContext";
-import { DEMO_HANDOVER, DEMO_PROFILE } from "@/constants/demo";
+import { api } from "@/services/api";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function AdminHomeScreen() {
-  const { profileName } = useSession();
+  const { profileId, profileName } = useSession();
+  const [handover, setHandover] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!profileId) return;
+    setLoading(true);
+    api.getHandover(profileId)
+      .then((res) => setHandover(res.summary))
+      .catch(() => setHandover(null))
+      .finally(() => setLoading(false));
+  }, [profileId]);
+
+  const displayName = profileName || "your child";
 
   return (
-    <Screen navTitle={`Hi, ${profileName}'s parent`} navSubtitle="Care memory dashboard">
+    <Screen navTitle={`Hi, ${displayName}'s parent`} navSubtitle="Care memory dashboard">
       <Card style={styles.profileCard} soft padding="md">
         <View style={styles.profileRow}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{profileName.charAt(0)}</Text>
+            <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
           </View>
           <View style={styles.profileText}>
-            <Text style={styles.profileName}>{profileName}</Text>
-            <Text style={styles.profileMeta}>{DEMO_PROFILE.ageLabel} · Active profile</Text>
+            <Text style={styles.profileName}>{displayName}</Text>
+            <Text style={styles.profileMeta}>Active care profile</Text>
           </View>
           <View style={styles.statusPill}>
             <View style={styles.statusDot} />
@@ -32,18 +46,32 @@ export default function AdminHomeScreen() {
       </Card>
 
       <Text style={styles.sectionTitle}>Shift handover preview</Text>
-      <SummaryCard title="Today's briefing" body={DEMO_HANDOVER} badge="Demo" />
-      <PrimaryButton
-        label="View full handover"
-        onPress={() => router.push("/(admin)/handover")}
-        icon={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
-      />
+      {loading ? (
+        <Card soft padding="md" style={styles.loadingCard}>
+          <ActivityIndicator color={colors.primary} />
+        </Card>
+      ) : handover ? (
+        <>
+          <SummaryCard title="Today's briefing" body={handover} />
+          <PrimaryButton
+            label="View full handover"
+            onPress={() => router.push("/(admin)/handover")}
+            icon={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+          />
+        </>
+      ) : (
+        <Card soft padding="md">
+          <Text style={styles.emptyText}>
+            No care information yet. Add memories to generate a handover.
+          </Text>
+        </Card>
+      )}
 
       <Text style={[styles.sectionTitle, styles.sectionGap]}>Quick actions</Text>
       <ActionTile
         icon="mic-outline"
         title="Add care memory"
-        subtitle="Voice or text → Cognee graph"
+        subtitle="Voice or text — saved to AI memory"
         onPress={() => router.push("/(admin)/memory")}
       />
       <ActionTile
@@ -55,7 +83,7 @@ export default function AdminHomeScreen() {
       <ActionTile
         icon="chatbubble-outline"
         title="Ask care assistant"
-        subtitle="Test questions against memory"
+        subtitle="Ask questions about the care profile"
         onPress={() => router.push("/(admin)/chat")}
       />
       <ActionTile
@@ -96,4 +124,6 @@ const styles = StyleSheet.create({
   statusText: { ...typography.caption, color: colors.success, fontWeight: "700" },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   sectionGap: { marginTop: spacing.lg },
+  loadingCard: { alignItems: "center", justifyContent: "center", minHeight: 80 },
+  emptyText: { ...typography.body, color: colors.textSecondary },
 });

@@ -14,7 +14,7 @@ export default function UploadScreen() {
         </View>
         <Text style={styles.title}>Upload a document</Text>
         <Text style={styles.subtitle}>
-          Original saved to Firebase Storage. OCR text is cleaned by Groq, then sent to Cognee remember().
+          Original file saved securely. OCR text is cleaned and saved to care memory.
         </Text>
         <PrimaryButton
           label="Choose file"
