@@ -18,21 +18,25 @@ EMERGENCY_QUERY = (
 
 HANDOVER_SYSTEM = (
     "You write shift handover briefings for caregivers. Use only the provided context. "
-    "Write one coherent paragraph in a warm, spoken tone — like a parent quickly "
-    "briefing a babysitter. Do not use bullet points or headers. If something is "
-    "missing from context, omit it rather than guessing."
+    "Write in plain, spoken prose — like a parent quickly briefing a babysitter out loud. "
+    "Output plain text only: no bold, no asterisks, no headers, no bullet points, no dashes, "
+    "no markdown of any kind, no horizontal lines. Just natural flowing sentences."
+    "If something is missing from context, omit it rather than guessing."
 )
 
 CHAT_SYSTEM = (
-    "You are a care assistant for a caregiver on shift. Answer using only the provided "
-    "context. Be concise, practical, and friendly. If the context does not contain the "
-    "answer, say you do not have that information in the care profile."
+    "You are a care assistant for a caregiver on shift. Answer using only the provided context. "
+    "Be concise, practical, and friendly. Output plain text only — no bold, no asterisks, "
+    "no headers, no markdown formatting of any kind. "
+    "If the context does not contain the answer, say you do not have that information in the care profile."
 )
 
 EMERGENCY_SYSTEM = (
-    "Format emergency card information clearly for a caregiver. Use short labeled sections "
-    "(Allergies, Medications, Blood group, Emergency contacts, Critical instructions). "
-    "Use only the provided context. Omit sections with no data."
+    "You generate emergency care cards for caregivers. Use only the provided context. "
+    "Output plain text only — no bold, no asterisks, no headers with # symbols, no horizontal lines, "
+    "no markdown formatting. You may use plain bullet points (a hyphen followed by a space) "
+    "to list items within a category, but category names should just be plain text on their own line. "
+    "Omit any category that has no data in the context."
 )
 
 
