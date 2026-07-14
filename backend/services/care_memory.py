@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from config import mem0_user_id
-from services import mem0, groq
+from services import firebase, mem0, groq
 
 HANDOVER_QUERY = (
     "What should a caregiver know before starting a shift? Include allergies, "
@@ -38,6 +38,8 @@ EMERGENCY_SYSTEM = (
 
 async def remember_for_profile(profile_id: str, text: str) -> None:
     await mem0.remember_text(text, mem0_user_id(profile_id))
+    # Bump the memory version so the handover cache is invalidated
+    await firebase.bump_memory_version(profile_id)
 
 
 async def answer_question(profile_id: str, question: str) -> str:
@@ -51,17 +53,25 @@ async def answer_question(profile_id: str, question: str) -> str:
 
 
 async def generate_handover(profile_id: str) -> str:
+    # Return cached summary if no new memories have been added since last generation
+    cached_summary, handover_version, memory_version = await firebase.get_handover_cache(profile_id)
+    if cached_summary and handover_version == memory_version:
+        return cached_summary
+
     context = await mem0.recall(HANDOVER_QUERY, mem0_user_id(profile_id))
     if not context:
         return (
             "No care information has been added to this profile yet. "
             "Ask the parent to add details before your shift."
         )
-    return await groq.phrase_response(
+    summary = await groq.phrase_response(
         system_prompt=HANDOVER_SYSTEM,
         user_prompt=f"Context:\n{context}",
         max_tokens=500,
     )
+    # Cache the result at the current version
+    await firebase.set_handover_cache(profile_id, summary, memory_version)
+    return summary
 
 
 async def generate_emergency_card(profile_id: str) -> str:

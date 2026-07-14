@@ -51,6 +51,9 @@ async def create_profile(*, name: str, admin_uid: str | None = None) -> dict[str
         "name": name.strip(),
         "admin_uid": admin_uid,
         "created_at": _utcnow(),
+        "memory_version": 0,
+        "handover_cache": None,
+        "handover_version": -1,
     }
     doc_ref.set(payload)
     return {"profile_id": doc_ref.id, **payload}
@@ -93,15 +96,14 @@ async def create_caregiver_link(profile_id: str) -> dict[str, Any]:
 
 async def list_caregiver_links(profile_id: str) -> list[dict[str, Any]]:
     db = _db()
-    query = (
-        db.collection(LINKS)
-        .where("profile_id", "==", profile_id)
-        .where("status", "==", "active")
-    )
+    # Single-field query only — avoids composite index requirement.
+    # Filter active status in Python.
+    query = db.collection(LINKS).where("profile_id", "==", profile_id)
     links: list[dict[str, Any]] = []
     for snap in query.stream():
         data = snap.to_dict() or {}
-        links.append({"link_id": snap.id, **data})
+        if data.get("status") == "active":
+            links.append({"link_id": snap.id, **data})
     return links
 
 
@@ -119,18 +121,19 @@ async def revoke_caregiver_link(profile_id: str, link_id: str) -> None:
 
 async def validate_caregiver_token(token: str) -> dict[str, Any]:
     db = _db()
-    query = (
-        db.collection(LINKS)
-        .where("token", "==", token)
-        .where("status", "==", "active")
-        .limit(1)
-    )
+    # Single-field query — composite index not required.
+    # Status is checked in Python to avoid a Firestore index error
+    # that would otherwise silently look like a revoked link.
+    query = db.collection(LINKS).where("token", "==", token).limit(1)
     matches = list(query.stream())
     if not matches:
         raise FirestoreError("Invalid or revoked caregiver link.")
 
     snap = matches[0]
     data = snap.to_dict() or {}
+    if data.get("status") != "active":
+        raise FirestoreError("Invalid or revoked caregiver link.")
+
     doc_ref = db.collection(LINKS).document(snap.id)
     doc_ref.update({"last_used_at": _utcnow()})
     return {"link_id": snap.id, **data}
@@ -143,3 +146,35 @@ async def set_caregiver_name(token: str, caregiver_name: str) -> dict[str, Any]:
     doc_ref.update({"caregiver_name": caregiver_name.strip()})
     link["caregiver_name"] = caregiver_name.strip()
     return link
+
+
+async def bump_memory_version(profile_id: str) -> int:
+    """Increment the memory_version counter. Returns the new version number."""
+    db = _db()
+    doc_ref = db.collection(PROFILES).document(profile_id)
+    snap = doc_ref.get()
+    current = (snap.to_dict() or {}).get("memory_version", 0)
+    new_version = current + 1
+    doc_ref.update({"memory_version": new_version})
+    return new_version
+
+
+async def get_handover_cache(profile_id: str) -> tuple[str | None, int, int]:
+    """Returns (cached_summary, handover_version, memory_version)."""
+    db = _db()
+    snap = db.collection(PROFILES).document(profile_id).get()
+    data = snap.to_dict() or {}
+    return (
+        data.get("handover_cache"),
+        data.get("handover_version", -1),
+        data.get("memory_version", 0),
+    )
+
+
+async def set_handover_cache(profile_id: str, summary: str, version: int) -> None:
+    """Persist the generated handover and the version it was generated at."""
+    db = _db()
+    db.collection(PROFILES).document(profile_id).update({
+        "handover_cache": summary,
+        "handover_version": version,
+    })
