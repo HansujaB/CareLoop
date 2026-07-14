@@ -1,11 +1,12 @@
 import Ionicons from "@/components/Ionicons";
 import { useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { Card } from "@/components/ui/Card";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { Screen } from "@/components/ui/Screen";
 import { TextField } from "@/components/ui/TextField";
+import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { useSession } from "@/context/SessionContext";
 import { api } from "@/services/api";
 import { colors, spacing, typography } from "@/constants/theme";
@@ -19,7 +20,6 @@ export default function MemoryScreen() {
   const { profileId, profileName } = useSession();
   const [mode, setMode] = useState("text");
   const [text, setText] = useState("");
-  const [recording, setRecording] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
 
@@ -41,7 +41,13 @@ export default function MemoryScreen() {
   };
 
   const buttonLabel =
-    status === "saved" ? "Saved ✓" : status === "error" ? "Save failed — retry" : saving ? "Saving…" : "Save to care memory";
+    status === "saved"
+      ? "Saved ✓"
+      : status === "error"
+        ? "Save failed — retry"
+        : saving
+          ? "Saving…"
+          : "Save to care memory";
 
   return (
     <Screen navTitle="Add memory" navSubtitle={`Updates ${profileName || "the care profile"}`}>
@@ -64,24 +70,11 @@ export default function MemoryScreen() {
             icon={<Ionicons name="cloud-upload-outline" size={18} color={colors.white} />}
           />
         </Card>
-      ) : (
+      ) : profileId ? (
         <Card style={styles.block} padding="md">
-          <View style={[styles.micCircle, recording && styles.micActive]}>
-            <Ionicons name="mic" size={36} color={recording ? colors.white : colors.primary} />
-          </View>
-          <Text style={styles.voiceTitle}>
-            {recording ? "Listening…" : "Tap to record a care update"}
-          </Text>
-          <Text style={styles.voiceHint}>
-            Groq Whisper transcribes your voice, then saves it to the care memory.
-          </Text>
-          <PrimaryButton
-            label={recording ? "Stop recording" : "Start recording"}
-            onPress={() => setRecording((r) => !r)}
-            icon={<Ionicons name={recording ? "stop" : "mic-outline"} size={18} color={colors.white} />}
-          />
+          <VoiceRecorder profileId={profileId} />
         </Card>
-      )}
+      ) : null}
     </Screen>
   );
 }
@@ -93,29 +86,5 @@ const styles = StyleSheet.create({
     minHeight: 160,
     textAlignVertical: "top",
     paddingTop: spacing.md,
-  },
-  micCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    alignSelf: "center",
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.primaryMuted,
-  },
-  micActive: {
-    backgroundColor: colors.primary,
-  },
-  voiceTitle: {
-    ...typography.h3,
-    color: colors.text,
-    textAlign: "center",
-  },
-  voiceHint: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    textAlign: "center",
   },
 });
