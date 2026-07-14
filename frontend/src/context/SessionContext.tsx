@@ -9,6 +9,7 @@ type SessionState = {
   authLoading: boolean;
   profileId: string | null;
   profileName: string;
+  profileLoading: boolean;
   caregiverToken: string | null;
   caregiverName: string | null;
   hasOnboarded: boolean;
@@ -28,9 +29,30 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role>("none");
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("");
+  const [profileLoading, setProfileLoading] = useState(true);
   const [caregiverToken, setCaregiverToken] = useState<string | null>(null);
   const [caregiverName, setCaregiverName] = useState<string | null>(null);
   const [hasOnboarded, setHasOnboarded] = useState(false);
+
+  // Restore persisted profile from AsyncStorage on mount
+  useEffect(() => {
+    async function loadPersistedProfile() {
+      try {
+        const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+        const id = await AsyncStorage.getItem("profileId");
+        const name = await AsyncStorage.getItem("profileName");
+        if (id) {
+          setProfileId(id);
+          setProfileName(name ?? "");
+        }
+      } catch {
+        // Storage read failed — continue without persisted profile
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+    loadPersistedProfile();
+  }, []);
 
   // Listen to Firebase auth state — sets admin role automatically when signed in
   useEffect(() => {
@@ -56,13 +78,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       authLoading,
       profileId,
       profileName,
+      profileLoading,
       caregiverToken,
       caregiverName,
       hasOnboarded,
       setRole,
-      setProfile: (id, name) => {
+      setProfile: async (id, name) => {
         setProfileId(id);
         setProfileName(name);
+        try {
+          const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+          await AsyncStorage.setItem("profileId", id);
+          await AsyncStorage.setItem("profileName", name);
+        } catch { /* storage write failed — in-memory state still works */ }
       },
       setCaregiverToken,
       setCaregiverName,
@@ -74,9 +102,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setProfileName("");
         setCaregiverToken(null);
         setCaregiverName(null);
+        try {
+          const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+          await AsyncStorage.multiRemove(["profileId", "profileName"]);
+        } catch { /* ignore */ }
       },
     }),
-    [role, firebaseUser, authLoading, profileId, profileName, caregiverToken, caregiverName, hasOnboarded],
+    [role, firebaseUser, authLoading, profileId, profileName, profileLoading, caregiverToken, caregiverName, hasOnboarded],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

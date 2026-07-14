@@ -12,9 +12,16 @@ import { api } from "@/services/api";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function AdminHomeScreen() {
-  const { profileId, profileName } = useSession();
+  const { profileId, profileName, authLoading, profileLoading } = useSession();
   const [handover, setHandover] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Gate: redirect to create-profile if profile not set up
+  useEffect(() => {
+    if (!authLoading && !profileLoading && !profileId) {
+      router.replace("/(admin)/create-profile");
+    }
+  }, [authLoading, profileLoading, profileId]);
 
   useEffect(() => {
     if (!profileId) return;

@@ -19,6 +19,10 @@ class RememberResponse(BaseModel):
     message: str = "Saved to care memory."
 
 
+class TranscribeResponse(BaseModel):
+    text: str
+
+
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1)
 

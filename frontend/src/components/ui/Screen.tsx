@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, View, ViewProps } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, ViewProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TopNav } from "@/components/ui/TopNav";
 import { DrawerMenu } from "@/components/ui/DrawerMenu";
@@ -56,13 +56,19 @@ export function Screen({
         />
       ) : null}
       {scroll ? (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={showNav ? 60 + insets.top : insets.top}
         >
-          {content}
-        </ScrollView>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {content}
+          </ScrollView>
+        </KeyboardAvoidingView>
       ) : (
         content
       )}

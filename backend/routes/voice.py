@@ -1,6 +1,6 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from models.schemas import RememberResponse
+from models.schemas import RememberResponse, TranscribeResponse
 from services import care_memory, firebase, groq
 from services.mem0 import Mem0Error
 from services.firebase import FirestoreError
@@ -44,3 +44,27 @@ async def ingest_voice(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return RememberResponse(message="Voice note saved to care memory.")
+
+
+@router.post("/transcribe", response_model=TranscribeResponse)
+async def transcribe_voice(
+    profile_id: str,
+    audio: UploadFile = File(...),
+) -> TranscribeResponse:
+    """Transcribe audio and return text without saving to memory.
+    The frontend shows the text for review, then calls /remember to save it.
+    """
+    await _require_profile(profile_id)
+    audio_bytes = await audio.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Empty audio file.")
+
+    filename = audio.filename or "recording.m4a"
+    content_type = audio.content_type or "audio/m4a"
+
+    try:
+        text = await groq.transcribe_audio(audio_bytes, filename, content_type=content_type)
+    except GroqError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return TranscribeResponse(text=text)

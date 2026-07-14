@@ -67,7 +67,7 @@ export function DrawerMenu({ visible, onClose }: Props) {
 
   const navigate = (route: string) => {
     onClose();
-    setTimeout(() => router.push(route as any), 150);
+    router.replace(route as any);
   };
 
   const handleSignOut = async () => {
