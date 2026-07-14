@@ -68,6 +68,20 @@ async def get_profile(profile_id: str) -> dict[str, Any] | None:
     return {"profile_id": snap.id, **data}
 
 
+async def get_profile_by_uid(uid: str) -> dict[str, Any] | None:
+    """Look up the first active profile owned by this Firebase UID."""
+    if not uid:
+        return None
+    db = _db()
+    query = db.collection(PROFILES).where("admin_uid", "==", uid).limit(1)
+    matches = list(query.stream())
+    if not matches:
+        return None
+    snap = matches[0]
+    data = snap.to_dict() or {}
+    return {"profile_id": snap.id, **data}
+
+
 async def create_caregiver_link(profile_id: str) -> dict[str, Any]:
     profile = await get_profile(profile_id)
     if not profile:

@@ -10,7 +10,7 @@ import { api } from "@/services/api";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function CreateProfileScreen() {
-  const { setProfile } = useSession();
+  const { setProfile, firebaseUser } = useSession();
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function CreateProfileScreen() {
     setCreating(true);
     setError(null);
     try {
-      const profile = await api.createProfile(name.trim());
+      const profile = await api.createProfile(name.trim(), firebaseUser?.uid ?? "");
       setProfile(profile.profile_id, profile.name);
       router.replace("/(admin)/memory");
     } catch (err: any) {

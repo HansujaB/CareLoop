@@ -3,7 +3,8 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 type RequestOptions = {
   method?: string;
   body?: unknown;
-  token?: string;
+  token?: string;   // X-Caregiver-Token
+  uid?: string;     // X-Firebase-UID
   formData?: FormData;
 };
 
@@ -11,6 +12,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const headers: Record<string, string> = {};
   if (options.token) {
     headers["X-Caregiver-Token"] = options.token;
+  }
+  if (options.uid) {
+    headers["X-Firebase-UID"] = options.uid;
   }
   if (options.body && !options.formData) {
     headers["Content-Type"] = "application/json";
@@ -31,10 +35,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 export const api = {
-  createProfile: (name: string) =>
+  createProfile: (name: string, uid: string) =>
     request<{ profile_id: string; name: string }>("/profiles", {
       method: "POST",
       body: { name },
+      uid,
+    }),
+
+  getProfileByUid: (uid: string) =>
+    request<{ profile_id: string; name: string } | null>("/profiles/mine", {
+      uid,
     }),
 
   rememberText: (profileId: string, text: string) =>
