@@ -40,6 +40,9 @@ export const api = {
   rememberText: (profileId: string, text: string) =>
     request(`/profiles/${profileId}/remember`, { body: { text } }),
 
+  transcribeVoice: (profileId: string, formData: FormData) =>
+    request<{ text: string }>(`/profiles/${profileId}/transcribe`, { formData }),
+
   getHandover: (profileId: string) =>
     request<{ summary: string }>(`/profiles/${profileId}/handover`),
 
