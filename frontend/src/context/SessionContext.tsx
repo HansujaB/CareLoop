@@ -1,9 +1,12 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { onAuthStateChanged, signOut, type User } from "@/services/firebase";
 
 type Role = "none" | "admin" | "caregiver";
 
 type SessionState = {
   role: Role;
+  firebaseUser: User | null;
+  authLoading: boolean;
   profileId: string | null;
   profileName: string;
   caregiverToken: string | null;
@@ -20,6 +23,8 @@ type SessionState = {
 const SessionContext = createContext<SessionState | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
+  const [authLoading, setAuthLoading] = useState(true);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [role, setRole] = useState<Role>("none");
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("");
@@ -27,9 +32,28 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [caregiverName, setCaregiverName] = useState<string | null>(null);
   const [hasOnboarded, setHasOnboarded] = useState(false);
 
+  // Listen to Firebase auth state — sets admin role automatically when signed in
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged((user) => {
+      setFirebaseUser(user);
+      if (user) {
+        setRole("admin");
+      } else if (role === "admin") {
+        // User signed out — reset to none (caregivers keep their token-based role)
+        setRole("none");
+        setProfileId(null);
+        setProfileName("");
+      }
+      setAuthLoading(false);
+    });
+    return unsubscribe;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const value = useMemo<SessionState>(
     () => ({
       role,
+      firebaseUser,
+      authLoading,
       profileId,
       profileName,
       caregiverToken,
@@ -43,7 +67,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setCaregiverToken,
       setCaregiverName,
       completeOnboarding: () => setHasOnboarded(true),
-      resetSession: () => {
+      resetSession: async () => {
+        await signOut();
         setRole("none");
         setProfileId(null);
         setProfileName("");
@@ -51,7 +76,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setCaregiverName(null);
       },
     }),
-    [role, profileId, profileName, caregiverToken, caregiverName, hasOnboarded],
+    [role, firebaseUser, authLoading, profileId, profileName, caregiverToken, caregiverName, hasOnboarded],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -59,8 +84,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
 export function useSession() {
   const ctx = useContext(SessionContext);
-  if (!ctx) {
-    throw new Error("useSession must be used within SessionProvider");
-  }
+  if (!ctx) throw new Error("useSession must be used within SessionProvider");
   return ctx;
 }

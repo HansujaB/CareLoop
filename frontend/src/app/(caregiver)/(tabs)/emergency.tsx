@@ -24,7 +24,7 @@ export default function CaregiverEmergencyScreen() {
   }, [caregiverToken]);
 
   return (
-    <Screen navTitle="Emergency card" navSubtitle="Keep this visible during the shift">
+    <Screen navTitle="Emergency card" navSubtitle="Keep this visible during the shift" showMenu={false}>
       {loading ? (
         <Card soft style={styles.center} padding="md">
           <ActivityIndicator color={colors.primary} />

@@ -29,6 +29,7 @@ export default function CaregiverHandoverScreen() {
       navTitle={`Good shift, ${caregiverName ?? "caregiver"}`}
       navSubtitle={`Briefing for ${profileName || "care profile"}`}
       avatarInitials={caregiverName?.charAt(0) ?? "C"}
+      showMenu={false}
     >
       <Text style={styles.lead}>
         Your shift handover — synthesized from everything the parent has stored in care memory.

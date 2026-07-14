@@ -1,22 +1,45 @@
 import Ionicons from "@/components/Ionicons";
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 import { Logo } from "@/components/Logo";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { TextField } from "@/components/ui/TextField";
-import { useSession } from "@/context/SessionContext";
+import { signUp } from "@/services/firebase";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function SignupScreen() {
-  const { setRole } = useSession();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const createAccount = () => {
-    setRole("admin");
-    router.replace("/(admin)/create-profile");
+  const createAccount = async () => {
+    if (!name.trim() || !email.trim() || password.length < 8) {
+      setError("Please fill in all fields. Password must be at least 8 characters.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await signUp(email.trim(), password, name.trim());
+      // onAuthStateChanged in SessionContext sets role to "admin" automatically
+      router.replace("/(admin)/create-profile");
+    } catch (err: any) {
+      const msg: string = err?.message ?? "";
+      if (msg.includes("email-already-in-use")) {
+        setError("An account with this email already exists. Sign in instead.");
+      } else if (msg.includes("invalid-email")) {
+        setError("Please enter a valid email address.");
+      } else if (msg.includes("weak-password")) {
+        setError("Password must be at least 8 characters.");
+      } else {
+        setError("Account creation failed. Check your connection and try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,7 +54,7 @@ export default function SignupScreen() {
       </View>
 
       <View style={styles.form}>
-        <TextField label="Full name" value={name} onChangeText={setName} placeholder="Priya Sharma" />
+        <TextField label="Full name" value={name} onChangeText={setName} placeholder="Your name" />
         <TextField
           label="Email"
           value={email}
@@ -47,10 +70,15 @@ export default function SignupScreen() {
           secureTextEntry
           placeholder="At least 8 characters"
         />
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <PrimaryButton
-          label="Create account"
+          label={loading ? "Creating account…" : "Create account"}
           onPress={createAccount}
-          icon={<Ionicons name="person-add-outline" size={18} color={colors.white} />}
+          icon={
+            loading
+              ? <ActivityIndicator size="small" color={colors.white} />
+              : <Ionicons name="person-add-outline" size={18} color={colors.white} />
+          }
         />
       </View>
 
@@ -76,6 +104,7 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginTop: spacing.md },
   subtitle: { ...typography.body, color: colors.textSecondary },
   form: { gap: spacing.md },
+  errorText: { ...typography.bodySmall, color: colors.danger },
   footer: { ...typography.bodySmall, color: colors.textSecondary, textAlign: "center" },
   link: { color: colors.primary, fontWeight: "600" },
 });

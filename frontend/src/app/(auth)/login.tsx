@@ -1,22 +1,42 @@
 import Ionicons from "@/components/Ionicons";
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 import { Logo } from "@/components/Logo";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SecondaryButton } from "@/components/ui/SecondaryButton";
 import { TextField } from "@/components/ui/TextField";
 import { useSession } from "@/context/SessionContext";
+import { signIn } from "@/services/firebase";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function LoginScreen() {
   const { setRole } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const signInAsParent = () => {
-    setRole("admin");
-    router.replace("/(admin)");
+  const signInAsParent = async () => {
+    if (!email.trim() || !password) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await signIn(email.trim(), password);
+      // onAuthStateChanged in SessionContext will set role to "admin" automatically
+      router.replace("/(admin)");
+    } catch (err: any) {
+      const msg: string = err?.message ?? "";
+      if (msg.includes("invalid-credential") || msg.includes("wrong-password") || msg.includes("user-not-found")) {
+        setError("Incorrect email or password.");
+      } else if (msg.includes("too-many-requests")) {
+        setError("Too many attempts. Please wait a moment and try again.");
+      } else {
+        setError("Sign in failed. Check your connection and try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const continueAsCaregiver = () => {
@@ -51,10 +71,15 @@ export default function LoginScreen() {
           secureTextEntry
           placeholder="••••••••"
         />
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <PrimaryButton
-          label="Sign in as parent"
+          label={loading ? "Signing in…" : "Sign in as parent"}
           onPress={signInAsParent}
-          icon={<Ionicons name="log-in-outline" size={18} color={colors.white} />}
+          icon={
+            loading
+              ? <ActivityIndicator size="small" color={colors.white} />
+              : <Ionicons name="log-in-outline" size={18} color={colors.white} />
+          }
         />
         <SecondaryButton
           label="I'm a caregiver (link access)"
@@ -81,28 +106,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.xl,
   },
-  header: {
-    gap: spacing.sm,
-  },
-  title: {
-    ...typography.h1,
-    color: colors.text,
-    marginTop: spacing.md,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  footer: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
-  link: {
-    color: colors.primary,
-    fontWeight: "600",
-  },
+  header: { gap: spacing.sm },
+  title: { ...typography.h1, color: colors.text, marginTop: spacing.md },
+  subtitle: { ...typography.body, color: colors.textSecondary },
+  form: { gap: spacing.md },
+  errorText: { ...typography.bodySmall, color: colors.danger },
+  footer: { ...typography.bodySmall, color: colors.textSecondary, textAlign: "center" },
+  link: { color: colors.primary, fontWeight: "600" },
 });

@@ -79,6 +79,7 @@ export default function CaregiverChatScreen() {
       navSubtitle="About the care profile"
       bottomInset={120}
       scroll={false}
+      showMenu={false}
     >
       <View style={styles.suggestions}>
         {SUGGESTIONS.map((q) => (

@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { ScrollView, StyleSheet, View, ViewProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TopNav } from "@/components/ui/TopNav";
+import { DrawerMenu } from "@/components/ui/DrawerMenu";
 import { colors, spacing } from "@/constants/theme";
 
 type Props = ViewProps & {
@@ -10,6 +12,7 @@ type Props = ViewProps & {
   navTitle?: string;
   navSubtitle?: string;
   showNav?: boolean;
+  showMenu?: boolean;
   avatarInitials?: string;
   bottomInset?: number;
 };
@@ -21,11 +24,14 @@ export function Screen({
   navTitle,
   navSubtitle,
   showNav = true,
+  showMenu = true,
   avatarInitials,
-  bottomInset = 96,
+  bottomInset = 32,
   style,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   const content = (
     <View
       style={[
@@ -42,7 +48,12 @@ export function Screen({
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {showNav ? (
-        <TopNav title={navTitle} subtitle={navSubtitle} avatarInitials={avatarInitials} />
+        <TopNav
+          title={navTitle}
+          subtitle={navSubtitle}
+          avatarInitials={avatarInitials}
+          onMenuPress={showMenu ? () => setDrawerOpen(true) : undefined}
+        />
       ) : null}
       {scroll ? (
         <ScrollView
@@ -55,6 +66,9 @@ export function Screen({
       ) : (
         content
       )}
+      {showMenu ? (
+        <DrawerMenu visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      ) : null}
     </View>
   );
 }
@@ -64,13 +78,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  padded: {
-    paddingHorizontal: spacing.md,
-  },
+  scrollContent: { flexGrow: 1 },
+  content: { flex: 1 },
+  padded: { paddingHorizontal: spacing.md },
 });
