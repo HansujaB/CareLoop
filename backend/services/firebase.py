@@ -41,7 +41,7 @@ def _ensure_firebase() -> None:
 
 def _db():
     _ensure_firebase()
-    return firestore.client()
+    return firestore.client(database_id="careloop-db")
 
 
 async def create_profile(*, name: str, admin_uid: str | None = None) -> dict[str, Any]:
