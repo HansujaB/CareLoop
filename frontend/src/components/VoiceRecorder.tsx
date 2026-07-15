@@ -1,21 +1,21 @@
-/**
- * VoiceRecorder – records audio via expo-av, transcribes through Groq Whisper,
- * shows the result for review, and saves to care memory on confirmation.
- *
- * Fully self-contained: the parent only needs to supply `profileId`.
- */
-
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
-import { Audio } from "expo-av";
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from "expo-audio";
 
 import Ionicons from "@/components/Ionicons";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SecondaryButton } from "@/components/ui/SecondaryButton";
+import { TextField } from "@/components/ui/TextField";
 import { api } from "@/services/api";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// Types
 
 type VoiceState =
   | "idle"
@@ -26,97 +26,101 @@ type VoiceState =
   | "saved"
   | "error";
 
-type Props = {
-  profileId: string;
-};
+type Props = { profileId: string };
 
-// ── Status copy map ────────────────────────────────────────────────────────────
+// Copy maps
 
-const TITLE_COPY: Record<VoiceState, string> = {
+const TITLE: Record<VoiceState, string> = {
   idle: "Tap to record a care update",
   recording: "Listening…",
   transcribing: "Transcribing…",
   review: "Transcription ready",
   saving: "Saving…",
-  saved: "Saved to memory ✓",
-  error: "Error",
+  saved: "Saved to memory",
+  error: "Something went wrong",
 };
 
-const HINT_COPY: Record<VoiceState, string> = {
+const HINT: Record<VoiceState, string> = {
   idle: "Tap the microphone to record a care update.",
   recording: "Listening… speak your care update clearly.",
   transcribing: "Transcribing with Groq Whisper…",
-  review: "Review the transcription below, then save to memory.",
+  review: "Review before saving in memory.",
   saving: "Saving to care memory…",
-  saved: "Saved to care memory ✓",
-  error: "", // populated dynamically from voiceError
+  saved: "Saved to care memory",
+  error: "", // overridden dynamically
 };
 
-// ── Mic indicator icon logic ───────────────────────────────────────────────────
+// Helpers
 
-function micIconName(state: VoiceState) {
+function micIcon(state: VoiceState) {
   if (state === "saved") return "checkmark" as const;
   if (state === "transcribing" || state === "saving")
     return "hourglass-outline" as const;
   return "mic" as const;
 }
 
-function micIconColor(state: VoiceState) {
-  if (state === "recording" || state === "saved") return colors.white;
-  return colors.primary;
+function micColor(state: VoiceState) {
+  return state === "recording" || state === "saved"
+    ? colors.white
+    : colors.primary;
 }
 
-// ── Component ──────────────────────────────────────────────────────────────────
+const IS_WEB = Platform.OS === "web";
+
+// Component
 
 export function VoiceRecorder({ profileId }: Props) {
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  // expo-audio recorder hook – manages lifecycle automatically
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder);
+
   const [state, setState] = useState<VoiceState>("idle");
   const [transcribedText, setTranscribedText] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // ── Recording lifecycle ────────────────────────────────────────────────────
-
-  const startRecording = useCallback(async () => {
-    try {
-      setErrorMsg("");
-      setTranscribedText("");
-
-      const { granted } = await Audio.requestPermissionsAsync();
+  // Request mic permission + configure audio session once on mount
+  useEffect(() => {
+    if (IS_WEB) return;
+    (async () => {
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
       if (!granted) {
         setErrorMsg("Microphone permission is required to record audio.");
         setState("error");
         return;
       }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
       });
+    })();
+  }, []);
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
-      recordingRef.current = recording;
+  // Recording
+  const startRecording = useCallback(async () => {
+    if (IS_WEB) {
+      setErrorMsg("Voice recording is only available on mobile devices.");
+      setState("error");
+      return;
+    }
+    try {
+      setErrorMsg("");
+      setTranscribedText("");
+      await recorder.prepareToRecordAsync();
+      recorder.record();
       setState("recording");
     } catch (err) {
       console.error("Failed to start recording:", err);
       setErrorMsg("Could not start recording. Check microphone permissions.");
       setState("error");
     }
-  }, []);
+  }, [recorder]);
 
   const stopRecording = useCallback(async () => {
-    const rec = recordingRef.current;
-    if (!rec) return;
-
     setState("transcribing");
-
     try {
-      await rec.stopAndUnloadAsync();
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-
-      const uri = rec.getURI();
-      recordingRef.current = null;
+      await recorder.stop();
+      // After stop(), the URI is available on recorder.uri
+      const uri = recorder.uri;
 
       if (!uri) {
         setErrorMsg("Recording failed — no audio file was created.");
@@ -124,14 +128,7 @@ export function VoiceRecorder({ profileId }: Props) {
         return;
       }
 
-      const formData = new FormData();
-      formData.append("audio", {
-        uri,
-        name: "recording.m4a",
-        type: "audio/m4a",
-      } as unknown as Blob);
-
-      const { text } = await api.transcribeVoice(profileId, formData);
+      const { text } = await api.transcribeVoice(profileId, uri);
       setTranscribedText(text);
       setState("review");
     } catch (err) {
@@ -141,17 +138,17 @@ export function VoiceRecorder({ profileId }: Props) {
       );
       setState("error");
     }
-  }, [profileId]);
+  }, [recorder, profileId]);
 
   const toggleRecording = useCallback(() => {
-    if (state === "recording") {
+    if (recorderState.isRecording) {
       stopRecording();
     } else {
       startRecording();
     }
-  }, [state, startRecording, stopRecording]);
+  }, [recorderState.isRecording, startRecording, stopRecording]);
 
-  // ── Save / discard ─────────────────────────────────────────────────────────
+  // Save / discard
 
   const saveToMemory = useCallback(async () => {
     if (!transcribedText.trim()) return;
@@ -178,17 +175,26 @@ export function VoiceRecorder({ profileId }: Props) {
     setState("idle");
   }, []);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-
+  // Render
   const hintText =
-    state === "error" ? errorMsg || "Something went wrong. Try again." : HINT_COPY[state];
+    state === "error" ? errorMsg || "Something went wrong. Try again." : HINT[state];
+
+  if (IS_WEB) {
+    return (
+      <View style={styles.root}>
+        <MicIndicator state="idle" />
+        <Text style={styles.title}>Voice recording unavailable on web</Text>
+        <Text style={styles.hint}>
+          Voice recording requires a mobile device. Use the Text tab instead.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
-      {/* Mic indicator */}
       <MicIndicator state={state} />
 
-      {/* Title + hint */}
       <Text
         style={[
           styles.title,
@@ -196,16 +202,28 @@ export function VoiceRecorder({ profileId }: Props) {
           state === "saved" && styles.titleSuccess,
         ]}
       >
-        {TITLE_COPY[state]}
+        {TITLE[state]}
       </Text>
       <Text style={styles.hint}>{hintText}</Text>
 
-      {/* Transcript preview */}
-      {(state === "review" || state === "saving") && transcribedText ? (
-        <TranscriptPreview text={transcribedText} />
+      {/* Editable transcript — user can fix Whisper mistakes before saving */}
+      {state === "review" ? (
+        <View style={styles.transcriptBox}>
+          <Text style={styles.transcriptLabel}>Whisper heard — edit if needed:</Text>
+          <TextField
+            value={transcribedText}
+            onChangeText={setTranscribedText}
+            multiline
+            style={styles.transcriptInput}
+          />
+        </View>
+      ) : state === "saving" && transcribedText ? (
+        <View style={styles.transcriptBox}>
+          <Text style={styles.transcriptLabel}>Saving:</Text>
+          <Text style={styles.transcriptText}>{transcribedText}</Text>
+        </View>
       ) : null}
 
-      {/* Action buttons */}
       <VoiceActions
         state={state}
         onToggleRecording={toggleRecording}
@@ -216,7 +234,7 @@ export function VoiceRecorder({ profileId }: Props) {
   );
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// Sub-components
 
 function MicIndicator({ state }: { state: VoiceState }) {
   return (
@@ -227,23 +245,11 @@ function MicIndicator({ state }: { state: VoiceState }) {
         state === "saved" && styles.micSaved,
       ]}
     >
-      <Ionicons
-        name={micIconName(state)}
-        size={36}
-        color={micIconColor(state)}
-      />
+      <Ionicons name={micIcon(state)} size={36} color={micColor(state)} />
     </View>
   );
 }
 
-function TranscriptPreview({ text }: { text: string }) {
-  return (
-    <View style={styles.transcriptBox}>
-      <Text style={styles.transcriptLabel}>Whisper heard:</Text>
-      <Text style={styles.transcriptText}>{text}</Text>
-    </View>
-  );
-}
 
 function VoiceActions({
   state,
@@ -266,7 +272,6 @@ function VoiceActions({
           icon={<Ionicons name="mic-outline" size={18} color={colors.white} />}
         />
       );
-
     case "recording":
       return (
         <PrimaryButton
@@ -275,10 +280,8 @@ function VoiceActions({
           icon={<Ionicons name="stop" size={18} color={colors.white} />}
         />
       );
-
     case "transcribing":
       return <PrimaryButton label="Transcribing…" loading disabled />;
-
     case "review":
       return (
         <View style={styles.buttonRow}>
@@ -304,10 +307,8 @@ function VoiceActions({
           </View>
         </View>
       );
-
     case "saving":
       return <PrimaryButton label="Saving…" loading disabled />;
-
     case "saved":
       return (
         <PrimaryButton
@@ -319,14 +320,12 @@ function VoiceActions({
   }
 }
 
-// ── Styles ──────────────────────────────────────────────────────────────────────
+// Styles
 
 const styles = StyleSheet.create({
   root: {
     gap: spacing.md,
   },
-
-  // Mic indicator
   micCircle: {
     width: 96,
     height: 96,
@@ -346,8 +345,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
     borderColor: colors.success,
   },
-
-  // Copy
   title: {
     ...typography.h3,
     color: colors.text,
@@ -360,26 +357,26 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: "center",
   },
-
-  // Transcript preview
   transcriptBox: {
     backgroundColor: colors.surface,
     borderRadius: radius.sm,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    gap: spacing.xs,
   },
   transcriptLabel: {
     ...typography.label,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
   },
   transcriptText: {
     ...typography.body,
     color: colors.text,
   },
-
-  // Buttons
+  transcriptInput: {
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
   buttonRow: {
     flexDirection: "row",
     gap: spacing.sm,

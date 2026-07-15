@@ -1,5 +1,50 @@
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
+/**
+ * Upload a file via XMLHttpRequest.
+ * React Native's Hermes fetch throws "Unsupported FormDataPart implementation"
+ * when you attach a { uri, name, type } part, but XHR handles it correctly.
+ */
+function uploadFile<T>(
+  path: string,
+  fileUri: string,
+  fieldName: string,
+  fileName: string,
+  mimeType: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${BASE_URL}${path}`);
+    xhr.responseType = "text";
+
+    xhr.onload = () => {
+      try {
+        const payload = JSON.parse(xhr.responseText) as Record<string, unknown>;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(payload as T);
+        } else {
+          const detail = typeof payload.detail === "string" ? payload.detail : "Request failed";
+          reject(new Error(detail));
+        }
+      } catch {
+        reject(new Error("Invalid JSON response from server"));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Network error — could not reach server"));
+    xhr.ontimeout = () => reject(new Error("Request timed out"));
+    xhr.timeout = 60_000;
+
+    const formData = new FormData();
+    // React Native accepts { uri, name, type } as a valid file part for XHR
+    (formData as unknown as { append(k: string, v: unknown): void }).append(
+      fieldName,
+      { uri: fileUri, name: fileName, type: mimeType },
+    );
+    xhr.send(formData);
+  });
+}
+
 type RequestOptions = {
   method?: string;
   body?: unknown;
@@ -50,8 +95,15 @@ export const api = {
   rememberText: (profileId: string, text: string) =>
     request(`/profiles/${profileId}/remember`, { body: { text } }),
 
-  transcribeVoice: (profileId: string, formData: FormData) =>
-    request<{ text: string }>(`/profiles/${profileId}/transcribe`, { formData }),
+  /** Upload a recorded audio file URI and get back the Whisper transcript. */
+  transcribeVoice: (profileId: string, fileUri: string) =>
+    uploadFile<{ text: string }>(
+      `/profiles/${profileId}/transcribe`,
+      fileUri,
+      "audio",
+      "recording.m4a",
+      "audio/m4a",
+    ),
 
   getHandover: (profileId: string) =>
     request<{ summary: string }>(`/profiles/${profileId}/handover`),
