@@ -9,7 +9,7 @@ CareLoop lets parents build a living, searchable knowledge base about their chil
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Expo](https://img.shields.io/badge/Mobile-Expo%20SDK%2056-000020?style=flat-square&logo=expo)](https://expo.dev)
 [![Mem0](https://img.shields.io/badge/Memory-Mem0%20Cloud-6366F1?style=flat-square)](https://mem0.ai)
-[![Groq](https://img.shields.io/badge/LLM-Groq%20%2B%20Llama%203.3-F55036?style=flat-square)](https://groq.com)
+[![Groq](https://img.shields.io/badge/LLM-Groq%20%20-F55036?style=flat-square)](https://groq.com)
 [![Firebase](https://img.shields.io/badge/DB-Firebase%20%2B%20Firestore-FFCA28?style=flat-square&logo=firebase)](https://firebase.google.com)
 
 </div>
