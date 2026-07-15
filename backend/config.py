@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     mem0_api_key: str = ""
 
     groq_api_key: str = ""
-    groq_llm_model: str = "openai/gpt-oss-20b"
+    groq_llm_model: str = "gemma2-9b-it"
     groq_whisper_model: str = "whisper-large-v3-turbo"
 
     firebase_service_account_path: str = "firebase-service-account.json"

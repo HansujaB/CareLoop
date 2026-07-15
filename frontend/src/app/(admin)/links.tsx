@@ -22,7 +22,7 @@ export default function LinksScreen() {
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);  // stores link_id of copied item
 
   const loadLinks = useCallback(async () => {
     if (!profileId) return;
@@ -61,20 +61,19 @@ export default function LinksScreen() {
     }
   };
 
-  const shareLink = async (url: string) => {
+  const shareLink = async (link: LinkItem) => {
+    const message = `CareLoop shift link for ${profileName}\nToken: ${link.token}\nDeep link: ${link.url}`;
     if (Platform.OS === "web") {
       try {
-        await navigator.clipboard.writeText(
-          `CareLoop shift link for ${profileName}: ${url}`,
-        );
-        setCopied(url);
+        await navigator.clipboard.writeText(message);
+        setCopied(link.link_id);
         setTimeout(() => setCopied(null), 2000);
       } catch {
         // ignore
       }
     } else {
       const { Share } = await import("react-native");
-      await Share.share({ message: `CareLoop shift link for ${profileName}: ${url}` });
+      await Share.share({ message });
     }
   };
 
@@ -107,8 +106,9 @@ export default function LinksScreen() {
                 <Text style={styles.linkTitle}>
                   {link.caregiver_name ?? "Unused link"}
                 </Text>
-                <Text style={styles.linkUrl} numberOfLines={1}>
-                  {link.url}
+                {/* Show token prominently so it's easy to copy/share */}
+                <Text style={styles.linkToken} numberOfLines={1} selectable>
+                  {link.token}
                 </Text>
               </View>
               <View style={styles.activeBadge}>
@@ -118,8 +118,8 @@ export default function LinksScreen() {
             <View style={styles.actions}>
               <SecondaryButton
                 compact
-                label={copied === link.url ? "Copied!" : "Share"}
-                onPress={() => shareLink(link.url)}
+                label={copied === link.link_id ? "Copied!" : "Share"}
+                onPress={() => shareLink(link)}
                 icon={<Ionicons name="share-outline" size={16} color={colors.text} />}
               />
               <SecondaryButton
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   linkText: { flex: 1, gap: 2 },
   linkTitle: { ...typography.body, color: colors.text, fontWeight: "600" },
-  linkUrl: { ...typography.caption, color: colors.textSecondary },
+  linkToken: { ...typography.caption, color: colors.primary, fontFamily: "monospace" },
   activeBadge: {
     backgroundColor: colors.successLight,
     paddingHorizontal: spacing.sm,

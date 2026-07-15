@@ -13,6 +13,7 @@ type SessionState = {
   profileId: string | null;
   profileName: string;
   profileLoading: boolean;
+  profileRecovering: boolean;  // true while Firestore UID lookup is in-flight
   caregiverToken: string | null;
   caregiverName: string | null;
   hasOnboarded: boolean;
@@ -51,6 +52,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("");
   const [profileLoading, setProfileLoading] = useState(true);
+  const [profileRecovering, setProfileRecovering] = useState(false);
   const [caregiverToken, setCaregiverToken] = useState<string | null>(null);
   const [caregiverName, setCaregiverName] = useState<string | null>(null);
   const [hasOnboarded, setHasOnboarded] = useState(false);
@@ -87,8 +89,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   // 3. UID-based recovery: if auth resolved + storage loaded + still no profile,
   //    try fetching the existing profile from the backend by Firebase UID.
   //    This handles app reinstalls or AsyncStorage wipes without losing data.
+  //    `profileRecovering` stays true for the duration so routing gates can wait.
   useEffect(() => {
-    if (!firebaseUser || authLoading || profileLoading || profileId) return;
+    if (!firebaseUser || authLoading || profileLoading) return;
+    if (profileId) {
+      // Already have a profile — nothing to recover
+      setProfileRecovering(false);
+      return;
+    }
+    // Mark recovery as in-flight so the admin home gate doesn't redirect prematurely
+    setProfileRecovering(true);
     api.getProfileByUid(firebaseUser.uid)
       .then((profile) => {
         if (profile?.profile_id) {
@@ -97,7 +107,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           _persistProfile(profile.profile_id, profile.name);
         }
       })
-      .catch(() => { /* no profile found — user will go to create-profile */ });
+      .catch(() => { /* no profile found — user will go to create-profile */ })
+      .finally(() => setProfileRecovering(false));
   }, [firebaseUser, authLoading, profileLoading, profileId]);
 
   const value = useMemo<SessionState>(
@@ -108,6 +119,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       profileId,
       profileName,
       profileLoading,
+      profileRecovering,
       caregiverToken,
       caregiverName,
       hasOnboarded,
@@ -127,10 +139,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setProfileName("");
         setCaregiverToken(null);
         setCaregiverName(null);
+        setProfileRecovering(false);
         await _clearProfile();
       },
     }),
-    [role, firebaseUser, authLoading, profileId, profileName, profileLoading, caregiverToken, caregiverName, hasOnboarded],
+    [role, firebaseUser, authLoading, profileId, profileName, profileLoading, profileRecovering, caregiverToken, caregiverName, hasOnboarded],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

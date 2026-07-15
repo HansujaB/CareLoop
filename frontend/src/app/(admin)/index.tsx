@@ -12,16 +12,17 @@ import { api } from "@/services/api";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function AdminHomeScreen() {
-  const { profileId, profileName, authLoading, profileLoading } = useSession();
+  const { profileId, profileName, authLoading, profileLoading, profileRecovering } = useSession();
   const [handover, setHandover] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Gate: redirect to create-profile if profile not set up
+  // Gate: redirect to create-profile only once all async loading is settled
+  // (AsyncStorage read + optional Firestore UID-based recovery both complete)
   useEffect(() => {
-    if (!authLoading && !profileLoading && !profileId) {
+    if (!authLoading && !profileLoading && !profileRecovering && !profileId) {
       router.replace("/(admin)/create-profile");
     }
-  }, [authLoading, profileLoading, profileId]);
+  }, [authLoading, profileLoading, profileRecovering, profileId]);
 
   useEffect(() => {
     if (!profileId) return;
