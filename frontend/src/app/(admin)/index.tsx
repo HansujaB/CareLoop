@@ -89,12 +89,6 @@ export default function AdminHomeScreen() {
         onPress={() => router.push("/(admin)/links")}
       />
       <ActionTile
-        icon="chatbubble-outline"
-        title="Ask care assistant"
-        subtitle="Ask questions about the care profile"
-        onPress={() => router.push("/(admin)/chat")}
-      />
-      <ActionTile
         icon="medkit-outline"
         title="Emergency card"
         subtitle="Allergies, meds, contacts"

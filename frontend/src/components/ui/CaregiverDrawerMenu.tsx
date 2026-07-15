@@ -1,6 +1,9 @@
 /**
- * DrawerMenu — slide-in hamburger navigation for the admin section.
- * Rendered as an overlay so it works inside a Stack layout (no Tabs needed).
+ * CaregiverDrawerMenu — slide-in hamburger for the caregiver section.
+ * Mirrors the admin DrawerMenu but:
+ *  - Uses caregiver identity (name / token) from session
+ *  - "Sign out" clears caregiverToken and navigates back to welcome
+ *  - Supports swipe-left gesture to close (PanResponder)
  */
 import Ionicons, { glyphMap } from "@/components/Ionicons";
 import { useEffect, useRef } from "react";
@@ -20,36 +23,31 @@ import { useSession } from "@/context/SessionContext";
 import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 
 const DRAWER_WIDTH = Dimensions.get("window").width * 0.78;
-const SWIPE_THRESHOLD = DRAWER_WIDTH * 0.3;
+const SWIPE_THRESHOLD = DRAWER_WIDTH * 0.3; // swipe 30% of drawer width to close
 
 type NavItem = {
   label: string;
   icon: keyof typeof glyphMap;
   route: string;
-  destructive?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Home", icon: "home-outline", route: "/(admin)" },
-  { label: "Add memory", icon: "mic-outline", route: "/(admin)/memory" },
-  { label: "Caregiver links", icon: "link-outline", route: "/(admin)/links" },
-  { label: "Shift handover", icon: "document-text-outline", route: "/(admin)/handover" },
-  { label: "Emergency card", icon: "medkit-outline", route: "/(admin)/emergency" },
-  { label: "Upload records", icon: "cloud-upload-outline", route: "/(admin)/upload" },
-  { label: "Profile", icon: "person-outline", route: "/(admin)/profile" },
+  { label: "Home",            icon: "home-outline",          route: "/(caregiver)/(tabs)/home" },
+  { label: "Shift handover",  icon: "document-text-outline", route: "/(caregiver)/(tabs)/handover" },
+  { label: "Ask assistant",   icon: "chatbubble-outline",    route: "/(caregiver)/(tabs)/chat" },
+  { label: "Emergency card",  icon: "medkit-outline",        route: "/(caregiver)/(tabs)/emergency" },
+  { label: "My profile",      icon: "person-outline",        route: "/(caregiver)/(tabs)/profile" },
 ];
 
-type Props = {
-  visible: boolean;
-  onClose: () => void;
-};
+type Props = { visible: boolean; onClose: () => void };
 
-export function DrawerMenu({ visible, onClose }: Props) {
+export function CaregiverDrawerMenu({ visible, onClose }: Props) {
   const insets = useSafeAreaInsets();
-  const { profileName, firebaseUser, resetSession } = useSession();
+  const { caregiverName, caregiverToken, setCaregiverToken, setCaregiverName } = useSession();
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const opacity    = useRef(new Animated.Value(0)).current;
 
+  // Open / close animation
   useEffect(() => {
     Animated.parallel([
       Animated.spring(translateX, {
@@ -66,20 +64,26 @@ export function DrawerMenu({ visible, onClose }: Props) {
     ]).start();
   }, [visible]);
 
-  // Swipe left to close
+  // Pan responder — swipe left to close
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, { dx, dy }) =>
-        Math.abs(dx) > Math.abs(dy) && dx < -10,
+        Math.abs(dx) > Math.abs(dy) && dx < -10, // horizontal left swipe
       onPanResponderMove: (_, { dx }) => {
         if (dx < 0) translateX.setValue(Math.max(dx, -DRAWER_WIDTH));
       },
       onPanResponderRelease: (_, { dx, vx }) => {
-        if (dx < -SWIPE_THRESHOLD || vx < -0.5) {
+        const shouldClose = dx < -SWIPE_THRESHOLD || vx < -0.5;
+        if (shouldClose) {
           onClose();
         } else {
-          Animated.spring(translateX, { toValue: 0, useNativeDriver: true, stiffness: 280, damping: 28 }).start();
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            stiffness: 280,
+            damping: 28,
+          }).start();
         }
       },
     }),
@@ -90,13 +94,17 @@ export function DrawerMenu({ visible, onClose }: Props) {
     router.replace(route as any);
   };
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     onClose();
-    await resetSession();
-    setTimeout(() => router.replace("/(auth)/login"), 200);
+    // Clear caregiver session → back to welcome / token entry
+    setCaregiverToken(null as any);
+    setCaregiverName(null as any);
+    setTimeout(() => router.replace("/(caregiver)/welcome"), 200);
   };
 
-  if (!visible && translateX._value === -DRAWER_WIDTH) return null;
+  if (!visible && (translateX as any)._value === -DRAWER_WIDTH) return null;
+
+  const initials = caregiverName?.charAt(0).toUpperCase() ?? "C";
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={visible ? "auto" : "none"}>
@@ -117,20 +125,18 @@ export function DrawerMenu({ visible, onClose }: Props) {
         {/* Header */}
         <View style={styles.drawerHeader}>
           <View style={styles.avatarLarge}>
-            <Text style={styles.avatarText}>
-              {(firebaseUser?.displayName || profileName || "P").charAt(0).toUpperCase()}
-            </Text>
+            <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.headerInfo}>
             <Text style={styles.displayName} numberOfLines={1}>
-              {firebaseUser?.displayName || "Parent"}
+              {caregiverName ?? "Caregiver"}
             </Text>
-            <Text style={styles.email} numberOfLines={1}>
-              {firebaseUser?.email || ""}
-            </Text>
-            {profileName ? (
-              <View style={styles.profileBadge}>
-                <Text style={styles.profileBadgeText}>Managing {profileName}</Text>
+            <Text style={styles.roleBadgeText}>On shift</Text>
+            {caregiverToken ? (
+              <View style={styles.tokenBadge}>
+                <Text style={styles.tokenBadgeText} numberOfLines={1}>
+                  {caregiverToken.slice(0, 12)}…
+                </Text>
               </View>
             ) : null}
           </View>
@@ -139,7 +145,6 @@ export function DrawerMenu({ visible, onClose }: Props) {
           </Pressable>
         </View>
 
-        {/* Divider */}
         <View style={styles.divider} />
 
         {/* Nav items */}
@@ -158,8 +163,9 @@ export function DrawerMenu({ visible, onClose }: Props) {
           ))}
         </View>
 
-        {/* Sign out */}
         <View style={styles.divider} />
+
+        {/* Sign out / switch account */}
         <Pressable
           style={({ pressed }) => [styles.navItem, styles.signOutItem, pressed && styles.navItemPressed]}
           onPress={handleSignOut}
@@ -167,7 +173,7 @@ export function DrawerMenu({ visible, onClose }: Props) {
           <View style={[styles.navIcon, styles.dangerIcon]}>
             <Ionicons name="log-out-outline" size={20} color={colors.danger} />
           </View>
-          <Text style={[styles.navLabel, styles.dangerLabel]}>Sign out</Text>
+          <Text style={[styles.navLabel, styles.dangerLabel]}>End shift / switch account</Text>
         </Pressable>
       </Animated.View>
     </View>
@@ -201,24 +207,26 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 18,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: "#F0FDF4",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-  avatarText: { ...typography.h3, color: colors.primary },
+  avatarText: { ...typography.h3, color: colors.success },
   headerInfo: { flex: 1, gap: 2 },
   displayName: { ...typography.body, color: colors.text, fontWeight: "700" },
-  email: { ...typography.caption, color: colors.textSecondary },
-  profileBadge: {
+  roleBadgeText: { ...typography.caption, color: colors.success, fontWeight: "600" },
+  tokenBadge: {
     marginTop: 4,
     alignSelf: "flex-start",
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surface,
     borderRadius: 999,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  profileBadgeText: { ...typography.caption, color: colors.primary, fontWeight: "600" },
+  tokenBadgeText: { ...typography.caption, color: colors.textSecondary, fontFamily: "monospace" },
   closeBtn: {
     width: 36,
     height: 36,

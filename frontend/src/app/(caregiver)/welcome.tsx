@@ -53,7 +53,7 @@ export default function CaregiverWelcomeScreen() {
       await api.caregiverSession(token.trim(), name.trim());
       setCaregiverToken(token.trim());
       setCaregiverName(name.trim());
-      router.replace("/(caregiver)/(tabs)/handover");
+      router.replace("/(caregiver)/(tabs)/home");
     } catch (err: any) {
       setError(err.message ?? "Invalid or revoked link. Check the token and try again.");
     } finally {

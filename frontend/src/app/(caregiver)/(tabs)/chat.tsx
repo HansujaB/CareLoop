@@ -1,4 +1,3 @@
-import Ionicons from "@/components/Ionicons";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -10,7 +9,10 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { router } from "expo-router";
+import Ionicons from "@/components/Ionicons";
 import { Card } from "@/components/ui/Card";
+import { CaregiverDrawerMenu } from "@/components/ui/CaregiverDrawerMenu";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { Screen } from "@/components/ui/Screen";
 import { useSession } from "@/context/SessionContext";
@@ -32,11 +34,17 @@ const SUGGESTIONS = [
 ];
 
 export default function CaregiverChatScreen() {
-  const { caregiverToken } = useSession();
+  const { caregiverName, caregiverToken } = useSession();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([GREETING]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  // No token → back to welcome
+  useEffect(() => {
+    if (!caregiverToken) router.replace("/(caregiver)/welcome");
+  }, [caregiverToken]);
 
   const send = async (text: string) => {
     const question = text.trim();
@@ -53,15 +61,20 @@ export default function CaregiverChatScreen() {
         ...prev,
         { id: `${Date.now()}-a`, role: "assistant", text: res.answer },
       ]);
-    } catch {
+    } catch (err: any) {
+      const isRevoked = err?.message?.toLowerCase().includes("revoked") ||
+                        err?.message?.toLowerCase().includes("invalid");
       setMessages((prev) => [
         ...prev,
         {
           id: `${Date.now()}-err`,
           role: "assistant",
-          text: "Sorry, couldn't reach the care memory right now. Please try again.",
+          text: isRevoked
+            ? "Your care link has been revoked. Please ask the parent for a new link."
+            : "Sorry, couldn't reach the care memory right now. Please try again.",
         },
       ]);
+      if (isRevoked) setTimeout(() => router.replace("/(caregiver)/welcome"), 3000);
     } finally {
       setSending(false);
     }
@@ -73,68 +86,76 @@ export default function CaregiverChatScreen() {
     }
   }, [messages]);
 
+  const initials = caregiverName?.charAt(0).toUpperCase() ?? "C";
+
   return (
-    <Screen
-      navTitle="Ask anything"
-      navSubtitle="About the care profile"
-      bottomInset={120}
-      scroll={false}
-      showMenu={false}
-    >
-      <View style={styles.suggestions}>
-        {SUGGESTIONS.map((q) => (
-          <PressableScale key={q} onPress={() => send(q)} style={styles.chip}>
-            <Text style={styles.chipText}>{q}</Text>
-          </PressableScale>
-        ))}
-      </View>
-
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={[styles.bubbleWrap, item.role === "user" && styles.userWrap]}>
-            <Card
-              soft={item.role === "assistant"}
-              elevated={item.role === "user"}
-              padding="md"
-              style={[styles.bubble, item.role === "user" && styles.userBubble]}
-            >
-              <Text style={[styles.bubbleText, item.role === "user" && styles.userText]}>
-                {item.text}
-              </Text>
-            </Card>
-          </View>
-        )}
-      />
-
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={styles.composer}>
-          <TextInput
-            value={input}
-            onChangeText={setInput}
-            placeholder="Ask about routines, meds, allergies..."
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            editable={!sending}
-            onSubmitEditing={() => send(input)}
-            returnKeyType="send"
-          />
-          <PressableScale
-            onPress={() => send(input)}
-            style={[styles.sendBtn, sending && styles.sendBtnDisabled]}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Ionicons name="send" size={18} color={colors.white} />
-            )}
-          </PressableScale>
+    <>
+      <Screen
+        navTitle="Ask anything"
+        navSubtitle="About the care profile"
+        avatarInitials={initials}
+        bottomInset={120}
+        scroll={false}
+        showMenu
+        onMenuPress={() => setDrawerOpen(true)}
+      >
+        <View style={styles.suggestions}>
+          {SUGGESTIONS.map((q) => (
+            <PressableScale key={q} onPress={() => send(q)} style={styles.chip}>
+              <Text style={styles.chipText}>{q}</Text>
+            </PressableScale>
+          ))}
         </View>
-      </KeyboardAvoidingView>
-    </Screen>
+
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <View style={[styles.bubbleWrap, item.role === "user" && styles.userWrap]}>
+              <Card
+                soft={item.role === "assistant"}
+                elevated={item.role === "user"}
+                padding="md"
+                style={[styles.bubble, item.role === "user" && styles.userBubble]}
+              >
+                <Text style={[styles.bubbleText, item.role === "user" && styles.userText]}>
+                  {item.text}
+                </Text>
+              </Card>
+            </View>
+          )}
+        />
+
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={styles.composer}>
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              placeholder="Ask about routines, meds, allergies..."
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              editable={!sending}
+              onSubmitEditing={() => send(input)}
+              returnKeyType="send"
+            />
+            <PressableScale
+              onPress={() => send(input)}
+              style={[styles.sendBtn, sending && styles.sendBtnDisabled]}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Ionicons name="send" size={18} color={colors.white} />
+              )}
+            </PressableScale>
+          </View>
+        </KeyboardAvoidingView>
+      </Screen>
+
+      <CaregiverDrawerMenu visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
+    </>
   );
 }
 

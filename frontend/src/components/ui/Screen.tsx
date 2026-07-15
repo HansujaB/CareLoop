@@ -15,6 +15,8 @@ type Props = ViewProps & {
   showMenu?: boolean;
   avatarInitials?: string;
   bottomInset?: number;
+  /** Override the menu-button handler. When provided the built-in DrawerMenu is NOT rendered. */
+  onMenuPress?: () => void;
 };
 
 export function Screen({
@@ -28,9 +30,12 @@ export function Screen({
   avatarInitials,
   bottomInset = 32,
   style,
+  onMenuPress: externalMenuPress,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // If caller provides onMenuPress, use it; otherwise use internal admin drawer
+  const menuHandler = externalMenuPress ?? (showMenu ? () => setDrawerOpen(true) : undefined);
 
   const content = (
     <View
@@ -52,7 +57,7 @@ export function Screen({
           title={navTitle}
           subtitle={navSubtitle}
           avatarInitials={avatarInitials}
-          onMenuPress={showMenu ? () => setDrawerOpen(true) : undefined}
+          onMenuPress={menuHandler}
         />
       ) : null}
       {scroll ? (
@@ -72,7 +77,8 @@ export function Screen({
       ) : (
         content
       )}
-      {showMenu ? (
+      {/* Only render the admin DrawerMenu when no external handler is given */}
+      {showMenu && !externalMenuPress ? (
         <DrawerMenu visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
       ) : null}
     </View>

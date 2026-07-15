@@ -24,7 +24,7 @@ export default function CaregiverTokenEntry() {
     }
     // Store token in session then navigate to the caregiver tabs
     setCaregiverToken(token);
-    router.replace("/(caregiver)/(tabs)/handover");
+    router.replace("/(caregiver)/(tabs)/home");
   }, [token]);
 
   // Show a spinner while the effect runs (practically instant)
