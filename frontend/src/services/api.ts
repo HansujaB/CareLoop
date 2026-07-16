@@ -79,6 +79,15 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return response.json() as Promise<T>;
 }
 
+export type CaregiverLink = {
+  link_id: string;
+  token: string;
+  url: string;
+  status: string;
+  caregiver_name: string | null;
+  locked_ip: string | null;
+};
+
 export const api = {
   createProfile: (name: string, uid: string) =>
     request<{ profile_id: string; name: string }>("/profiles", {
@@ -117,13 +126,13 @@ export const api = {
     request<{ content: string }>(`/profiles/${profileId}/emergency`),
 
   createLink: (profileId: string) =>
-    request<{ link_id: string; token: string; url: string; status: string }>(
+    request<CaregiverLink>(
       `/profiles/${profileId}/links`,
       { method: "POST" },
     ),
 
   listLinks: (profileId: string) =>
-    request<Array<{ link_id: string; token: string; url: string; status: string }>>(
+    request<CaregiverLink[]>(
       `/profiles/${profileId}/links`,
     ),
 
@@ -144,4 +153,55 @@ export const api = {
 
   caregiverEmergency: (token: string) =>
     request<{ content: string }>("/caregiver/emergency", { token }),
+
+  /**
+   * Upload a PDF or image file as a medical record.
+   * Uses XHR (not fetch) so React Native / Hermes can attach the file part.
+   * The backend runs OCR, cleans the text with Groq, and saves it to Mem0.
+   */
+  uploadMedicalRecord: (
+    profileId: string,
+    uid: string,
+    fileUri: string,
+    fileName: string,
+    mimeType: string,
+  ) => {
+    const xhr = new XMLHttpRequest();
+    const url = `${BASE_URL}/profiles/${profileId}/upload`;
+    return new Promise<{ ok: boolean; message: string; ocr_chars: number }>(
+      (resolve, reject) => {
+        xhr.open("POST", url);
+        xhr.setRequestHeader("X-Firebase-UID", uid);
+        xhr.responseType = "text";
+        xhr.timeout = 120_000; // OCR + Groq can take a while
+
+        xhr.onload = () => {
+          try {
+            const payload = JSON.parse(xhr.responseText) as Record<string, unknown>;
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(payload as { ok: boolean; message: string; ocr_chars: number });
+            } else {
+              const detail =
+                typeof payload.detail === "string" ? payload.detail : "Upload failed";
+              reject(new Error(detail));
+            }
+          } catch {
+            reject(new Error("Invalid response from server"));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network error — could not reach server"));
+        xhr.ontimeout = () =>
+          reject(new Error("Upload timed out. The file may be too large or OCR is slow."));
+
+        const formData = new FormData();
+        (formData as unknown as { append(k: string, v: unknown): void }).append("file", {
+          uri: fileUri,
+          name: fileName,
+          type: mimeType,
+        });
+        xhr.send(formData);
+      },
+    );
+  },
 };

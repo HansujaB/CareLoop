@@ -23,18 +23,21 @@ import { colors, spacing, typography } from "@/constants/theme";
 
 export default function CaregiverWelcomeScreen() {
   const insets = useSafeAreaInsets();
-  const { caregiverToken, setCaregiverName, setCaregiverToken } = useSession();
+  const { caregiverToken, caregiverName, setCaregiverName, setCaregiverToken } = useSession();
   const [name, setName] = useState("");
   const [token, setToken] = useState("");       // empty — caregiver must paste their real token
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // If a token was already stored (came via deep link), skip straight to handover
+  // If a full session is already established (came via deep link that already
+  // ran caregiverSession), skip straight to the tabs.
+  // Don't skip if we only have a token but no name — that means the name step
+  // hasn't been completed yet.
   useEffect(() => {
-    if (caregiverToken) {
+    if (caregiverToken && caregiverName) {
       router.replace("/(caregiver)/(tabs)/handover");
     }
-  }, [caregiverToken]);
+  }, [caregiverToken, caregiverName]);
 
   const enter = async () => {
     if (!name.trim()) {

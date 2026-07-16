@@ -34,8 +34,8 @@ export const auth =
   getApps().length > 1
     ? getAuth(app)
     : initializeAuth(app, {
-        persistence: getReactNativePersistence(ReactNativeAsyncStorage),
-      });
+      persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+    });
 
 export type { User };
 

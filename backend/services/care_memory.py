@@ -18,10 +18,9 @@ EMERGENCY_QUERY = (
 
 HANDOVER_SYSTEM = (
     "You write shift handover briefings for caregivers. Use only the provided context. "
-    "Write in plain, spoken prose — like a parent quickly briefing a babysitter out loud. "
-    "Output plain text only: no bold, no asterisks, no headers, no bullet points, no dashes, "
-    "no markdown of any kind, no horizontal lines. Just natural flowing sentences."
-    "If something is missing from context, omit it rather than guessing."
+    "Write one coherent paragraph in a warm, spoken tone — like a parent quickly "
+    "briefing a babysitter. Do not use bullet points or headers. If something is "
+    "missing from context, omit it rather than guessing."
 )
 
 CHAT_SYSTEM = (

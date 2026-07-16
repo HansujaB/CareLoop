@@ -12,19 +12,28 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { Screen } from "@/components/ui/Screen";
 import { SecondaryButton } from "@/components/ui/SecondaryButton";
 import { useSession } from "@/context/SessionContext";
+import { caregiverCache } from "@/services/cache";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 
 export default function CaregiverProfileScreen() {
-  const { caregiverName, caregiverToken, setCaregiverToken, setCaregiverName } = useSession();
+  const { caregiverName, caregiverToken, setCaregiverToken, setCaregiverName, setRole } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const displayName = caregiverName ?? "Caregiver";
-  const initials    = displayName.charAt(0).toUpperCase();
+  const initials = displayName.charAt(0).toUpperCase();
 
-  const endShift = () => {
+  const endShift = async () => {
+    // Clear the local cache for this token before wiping the session
+    if (caregiverToken) {
+      await caregiverCache.clear(caregiverToken);
+    }
+    // Wipe session state
+    setRole("none");
     setCaregiverToken(null as any);
     setCaregiverName(null as any);
-    router.replace("/(caregiver)/welcome");
+    // Navigate directly to the role-selection / login screen — bypassing index.tsx
+    // to avoid a race where index still sees role==="caregiver" and loops back to welcome.
+    router.replace("/(auth)/login");
   };
 
   return (

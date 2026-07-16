@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes import care, caregiver, links, memory, profiles, voice
+from routes import care, caregiver, links, memory, profiles, upload, voice
 
 logging.basicConfig(level=logging.INFO)
 
@@ -27,6 +27,7 @@ app.include_router(voice.router)
 app.include_router(care.router)
 app.include_router(links.router)
 app.include_router(caregiver.router)
+app.include_router(upload.router)
 
 
 @app.get("/health")

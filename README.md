@@ -121,7 +121,7 @@ npx expo start --clear
 |---|---|---|---|
 | `MEM0_API_KEY` | ✅ | Mem0 Cloud API key for care memory storage & search | [app.mem0.ai](https://app.mem0.ai) → API Keys |
 | `GROQ_API_KEY` | ✅ | Groq API key for Whisper transcription + Llama LLM | [console.groq.com](https://console.groq.com) → API Keys |
-| `GROQ_LLM_MODEL` | ⬜ | LLM model for phrasing responses | Default: `llama-3.3-70b-versatile` |
+| `GROQ_LLM_MODEL` | ⬜ | LLM model for phrasing responses | Default: `openai/gpt-oss-20b` |
 | `GROQ_WHISPER_MODEL` | ⬜ | Whisper model for voice transcription | Default: `whisper-large-v3-turbo` |
 | `FIREBASE_SERVICE_ACCOUNT_PATH` | ✅ | Path to Firebase service account JSON | Firebase Console → Project Settings → Service Accounts → Generate new private key |
 | `CAREGIVER_LINK_BASE_URL` | ⬜ | Deep link base for caregiver URLs | Default: `careloop://c` |
@@ -130,7 +130,7 @@ npx expo start --clear
 
 | Variable | Required | Description |
 |---|---|---|
-| `EXPO_PUBLIC_API_URL` | ✅ | URL of your running FastAPI backend (e.g. `http://192.168.1.10:8000`) |
+| `EXPO_PUBLIC_API_URL` | ✅ | URL of your running FastAPI backend (e.g. `http://192.168.1.10:8080`) |
 
 ---
 
@@ -161,7 +161,7 @@ npx expo start --clear
 | Navigation | Expo Router v4 (file-based) |
 | Backend | FastAPI + Uvicorn |
 | Care memory | **Mem0 Cloud** — semantic memory storage & search |
-| LLM phrasing | **Groq** — Llama 3.3 70B Versatile |
+| LLM phrasing | **Groq** — Open AI gpt-oss-20b |
 | Voice STT | **Groq** — Whisper Large v3 Turbo |
 | Auth / DB | Firebase Authentication + Firestore |
 | File storage | Firebase Storage (medical record originals) |

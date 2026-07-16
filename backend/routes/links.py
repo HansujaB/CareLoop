@@ -35,6 +35,8 @@ async def list_links(profile_id: str) -> list[CaregiverLinkResponse]:
             token=link["token"],
             url=f"{settings.caregiver_link_base_url}/{link['token']}",
             status=link["status"],
+            caregiver_name=link.get("caregiver_name"),
+            locked_ip=link.get("locked_ip"),
         )
         for link in links
     ]

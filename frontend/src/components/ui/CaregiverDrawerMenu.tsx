@@ -20,6 +20,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useSession } from "@/context/SessionContext";
+import { caregiverCache } from "@/services/cache";
 import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 
 const DRAWER_WIDTH = Dimensions.get("window").width * 0.78;
@@ -32,20 +33,20 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Home",            icon: "home-outline",          route: "/(caregiver)/(tabs)/home" },
-  { label: "Shift handover",  icon: "document-text-outline", route: "/(caregiver)/(tabs)/handover" },
-  { label: "Ask assistant",   icon: "chatbubble-outline",    route: "/(caregiver)/(tabs)/chat" },
-  { label: "Emergency card",  icon: "medkit-outline",        route: "/(caregiver)/(tabs)/emergency" },
-  { label: "My profile",      icon: "person-outline",        route: "/(caregiver)/(tabs)/profile" },
+  { label: "Home", icon: "home-outline", route: "/(caregiver)/(tabs)/home" },
+  { label: "Shift handover", icon: "document-text-outline", route: "/(caregiver)/(tabs)/handover" },
+  { label: "Ask assistant", icon: "chatbubble-outline", route: "/(caregiver)/(tabs)/chat" },
+  { label: "Emergency card", icon: "medkit-outline", route: "/(caregiver)/(tabs)/emergency" },
+  { label: "My profile", icon: "person-outline", route: "/(caregiver)/(tabs)/profile" },
 ];
 
 type Props = { visible: boolean; onClose: () => void };
 
 export function CaregiverDrawerMenu({ visible, onClose }: Props) {
   const insets = useSafeAreaInsets();
-  const { caregiverName, caregiverToken, setCaregiverToken, setCaregiverName } = useSession();
+  const { caregiverName, caregiverToken, setCaregiverToken, setCaregiverName, setRole } = useSession();
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
-  const opacity    = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   // Open / close animation
   useEffect(() => {
@@ -94,12 +95,18 @@ export function CaregiverDrawerMenu({ visible, onClose }: Props) {
     router.replace(route as any);
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     onClose();
-    // Clear caregiver session → back to welcome / token entry
+    // Clear cached data for this token before wiping the session
+    if (caregiverToken) {
+      await caregiverCache.clear(caregiverToken);
+    }
+    setRole("none");
     setCaregiverToken(null as any);
     setCaregiverName(null as any);
-    setTimeout(() => router.replace("/(caregiver)/welcome"), 200);
+    // Navigate directly to login/role-selection — skip index.tsx to avoid
+    // a race where role is still "caregiver" and we loop back to welcome.
+    router.replace("/(auth)/login");
   };
 
   if (!visible && (translateX as any)._value === -DRAWER_WIDTH) return null;

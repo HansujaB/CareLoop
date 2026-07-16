@@ -133,11 +133,8 @@ async def revoke_caregiver_link(profile_id: str, link_id: str) -> None:
     doc_ref.update({"status": "revoked", "revoked_at": _utcnow()})
 
 
-async def validate_caregiver_token(token: str) -> dict[str, Any]:
+async def validate_caregiver_token(token: str, client_ip: str | None = None) -> dict[str, Any]:
     db = _db()
-    # Single-field query — composite index not required.
-    # Status is checked in Python to avoid a Firestore index error
-    # that would otherwise silently look like a revoked link.
     query = db.collection(LINKS).where("token", "==", token).limit(1)
     matches = list(query.stream())
     if not matches:
@@ -148,16 +145,29 @@ async def validate_caregiver_token(token: str) -> dict[str, Any]:
     if data.get("status") != "active":
         raise FirestoreError("Invalid or revoked caregiver link.")
 
+    # IP enforcement: once a device has locked this token, reject other IPs
+    locked_ip: str | None = data.get("locked_ip")
+    if locked_ip and client_ip and locked_ip != client_ip:
+        raise FirestoreError(
+            "This care link is already in use from another device. "
+            "Ask the parent to generate a new link."
+        )
+
     doc_ref = db.collection(LINKS).document(snap.id)
     doc_ref.update({"last_used_at": _utcnow()})
     return {"link_id": snap.id, **data}
 
 
-async def set_caregiver_name(token: str, caregiver_name: str) -> dict[str, Any]:
-    link = await validate_caregiver_token(token)
+async def set_caregiver_name(token: str, caregiver_name: str, client_ip: str | None = None) -> dict[str, Any]:
+    """Register the caregiver name and lock the token to the device IP (first use wins)."""
+    link = await validate_caregiver_token(token, client_ip)
     db = _db()
     doc_ref = db.collection(LINKS).document(link["link_id"])
-    doc_ref.update({"caregiver_name": caregiver_name.strip()})
+    updates: dict[str, Any] = {"caregiver_name": caregiver_name.strip()}
+    # Lock the IP on first login — subsequent logins from a different IP are blocked
+    if not link.get("locked_ip") and client_ip:
+        updates["locked_ip"] = client_ip
+    doc_ref.update(updates)
     link["caregiver_name"] = caregiver_name.strip()
     return link
 
@@ -191,4 +201,25 @@ async def set_handover_cache(profile_id: str, summary: str, version: int) -> Non
     db.collection(PROFILES).document(profile_id).update({
         "handover_cache": summary,
         "handover_version": version,
+    })
+
+
+async def get_emergency_cache(profile_id: str) -> tuple[str | None, int, int]:
+    """Returns (cached_content, emergency_version, memory_version)."""
+    db = _db()
+    snap = db.collection(PROFILES).document(profile_id).get()
+    data = snap.to_dict() or {}
+    return (
+        data.get("emergency_cache"),
+        data.get("emergency_version", -1),
+        data.get("memory_version", 0),
+    )
+
+
+async def set_emergency_cache(profile_id: str, content: str, version: int) -> None:
+    """Persist the generated emergency card and the version it was generated at."""
+    db = _db()
+    db.collection(PROFILES).document(profile_id).update({
+        "emergency_cache": content,
+        "emergency_version": version,
     })

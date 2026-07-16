@@ -6,6 +6,7 @@ import { CaregiverDrawerMenu } from "@/components/ui/CaregiverDrawerMenu";
 import { Screen } from "@/components/ui/Screen";
 import { useSession } from "@/context/SessionContext";
 import { api } from "@/services/api";
+import { caregiverCache } from "@/services/cache";
 import { colors, typography } from "@/constants/theme";
 
 export default function CaregiverEmergencyScreen() {
@@ -15,26 +16,44 @@ export default function CaregiverEmergencyScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // No token → back to welcome
   useEffect(() => {
-    if (!caregiverToken) router.replace("/(caregiver)/welcome");
-  }, [caregiverToken]);
+    if (!caregiverToken) {
+      router.replace("/(caregiver)/welcome");
+      return;
+    }
 
-  useEffect(() => {
-    if (!caregiverToken) return;
-    api.caregiverEmergency(caregiverToken)
-      .then((res) => setContent(res.content))
-      .catch((err: any) => {
-        const isRevoked = err?.message?.toLowerCase().includes("revoked") ||
-                          err?.message?.toLowerCase().includes("invalid");
+    (async () => {
+      // 1. Serve from local cache if fresh
+      const cached = await caregiverCache.getEmergency(caregiverToken);
+      if (cached) {
+        setContent(cached);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Cache miss — fetch (backend returns from its own Firestore cache
+      //    when memory hasn't changed, so slow Groq calls are rare)
+      try {
+        const res = await api.caregiverEmergency(caregiverToken);
+        setContent(res.content);
+        await caregiverCache.saveEmergency(caregiverToken, res.content);
+      } catch (err: any) {
+        const isRevoked =
+          err?.message?.toLowerCase().includes("revoked") ||
+          err?.message?.toLowerCase().includes("invalid");
         setError(
           isRevoked
             ? "Your care link has been revoked. Please ask the parent for a new link."
             : (err.message ?? "Failed to load emergency card."),
         );
-        if (isRevoked) setTimeout(() => router.replace("/(caregiver)/welcome"), 3000);
-      })
-      .finally(() => setLoading(false));
+        if (isRevoked) {
+          await caregiverCache.clear(caregiverToken);
+          setTimeout(() => router.replace("/(caregiver)/welcome"), 3000);
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [caregiverToken]);
 
   const initials = caregiverName?.charAt(0).toUpperCase() ?? "C";

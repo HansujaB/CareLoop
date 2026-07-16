@@ -1,28 +1,21 @@
 import Ionicons from "@/components/Ionicons";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import { Card } from "@/components/ui/Card";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SecondaryButton } from "@/components/ui/SecondaryButton";
 import { Screen } from "@/components/ui/Screen";
 import { useSession } from "@/context/SessionContext";
-import { api } from "@/services/api";
+import { api, type CaregiverLink } from "@/services/api";
 import { colors, radius, spacing, typography } from "@/constants/theme";
-
-type LinkItem = {
-  link_id: string;
-  token: string;
-  url: string;
-  status: string;
-  caregiver_name?: string | null;
-};
 
 export default function LinksScreen() {
   const { profileId, profileName } = useSession();
-  const [links, setLinks] = useState<LinkItem[]>([]);
+  const [links, setLinks] = useState<CaregiverLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);  // stores link_id of copied item
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadLinks = useCallback(async () => {
     if (!profileId) return;
@@ -36,7 +29,14 @@ export default function LinksScreen() {
     }
   }, [profileId]);
 
-  useEffect(() => { loadLinks(); }, [loadLinks]);
+  // Initial load + poll every 8 s so caregiver names update in near-real-time
+  useEffect(() => {
+    loadLinks();
+    intervalRef.current = setInterval(loadLinks, 8_000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [loadLinks]);
 
   const generateLink = async () => {
     if (!profileId || generating) return;
@@ -61,7 +61,7 @@ export default function LinksScreen() {
     }
   };
 
-  const shareLink = async (link: LinkItem) => {
+  const shareLink = async (link: CaregiverLink) => {
     const message = `CareLoop shift link for ${profileName}\nToken: ${link.token}\nDeep link: ${link.url}`;
     if (Platform.OS === "web") {
       try {
@@ -104,15 +104,16 @@ export default function LinksScreen() {
               </View>
               <View style={styles.linkText}>
                 <Text style={styles.linkTitle}>
-                  {link.caregiver_name ?? "Unused link"}
+                  {link.caregiver_name ?? "Unused — awaiting caregiver"}
                 </Text>
-                {/* Show token prominently so it's easy to copy/share */}
                 <Text style={styles.linkToken} numberOfLines={1} selectable>
                   {link.token}
                 </Text>
               </View>
               <View style={styles.activeBadge}>
-                <Text style={styles.activeText}>Active</Text>
+                <Text style={styles.activeText}>
+                  {link.locked_ip ? "In use" : "Active"}
+                </Text>
               </View>
             </View>
             <View style={styles.actions}>
