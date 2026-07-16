@@ -25,23 +25,18 @@ export default function CaregiverHomeScreen() {
   }
 
   const displayName = caregiverName ?? "Caregiver";
-  const initials    = displayName.charAt(0).toUpperCase();
 
   return (
     <>
       <Screen
         navTitle={`Hi, ${displayName}`}
         navSubtitle="Caregiver dashboard"
-        avatarInitials={initials}
         showMenu
         onMenuPress={() => setDrawerOpen(true)}
       >
         {/* Shift status card */}
         <Card style={styles.statusCard} padding="md" soft>
           <View style={styles.statusRow}>
-            <View style={styles.statusAvatar}>
-              <Text style={styles.statusInitials}>{initials}</Text>
-            </View>
             <View style={styles.statusText}>
               <Text style={styles.statusName}>{displayName}</Text>
               <Text style={styles.statusRole}>Caregiver — on shift</Text>
@@ -102,15 +97,6 @@ export default function CaregiverHomeScreen() {
 const styles = StyleSheet.create({
   statusCard: { marginBottom: spacing.lg },
   statusRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  statusAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    backgroundColor: "#F0FDF4",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statusInitials: { ...typography.h3, color: colors.success },
   statusText: { flex: 1, gap: 2 },
   statusName: { ...typography.h2, color: colors.text },
   statusRole: { ...typography.bodySmall, color: colors.textSecondary },

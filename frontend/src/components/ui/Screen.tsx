@@ -13,7 +13,6 @@ type Props = ViewProps & {
   navSubtitle?: string;
   showNav?: boolean;
   showMenu?: boolean;
-  avatarInitials?: string;
   bottomInset?: number;
   /** Override the menu-button handler. When provided the built-in DrawerMenu is NOT rendered. */
   onMenuPress?: () => void;
@@ -27,7 +26,6 @@ export function Screen({
   navSubtitle,
   showNav = true,
   showMenu = true,
-  avatarInitials,
   bottomInset = 32,
   style,
   onMenuPress: externalMenuPress,
@@ -53,10 +51,9 @@ export function Screen({
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {showNav ? (
-        <TopNav
+      <TopNav
           title={navTitle}
           subtitle={navSubtitle}
-          avatarInitials={avatarInitials}
           onMenuPress={menuHandler}
         />
       ) : null}

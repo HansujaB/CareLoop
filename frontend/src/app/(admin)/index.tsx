@@ -39,9 +39,6 @@ export default function AdminHomeScreen() {
     <Screen navTitle={`Hi, ${displayName}'s parent`} navSubtitle="Care memory dashboard">
       <Card style={styles.profileCard} soft padding="md">
         <View style={styles.profileRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
-          </View>
           <View style={styles.profileText}>
             <Text style={styles.profileName}>{displayName}</Text>
             <Text style={styles.profileMeta}>Active care profile</Text>
@@ -101,15 +98,6 @@ export default function AdminHomeScreen() {
 const styles = StyleSheet.create({
   profileCard: { marginBottom: spacing.lg },
   profileRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { ...typography.h3, color: colors.primary },
   profileText: { flex: 1, gap: 2 },
   profileName: { ...typography.h2, color: colors.text },
   profileMeta: { ...typography.bodySmall, color: colors.textSecondary },

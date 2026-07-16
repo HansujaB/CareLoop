@@ -1,220 +1,209 @@
-<div align="center">
+# CareLoop
 
-# 🫶 CareLoop
-
-**AI-powered care memory for families and caregivers.**
-
-CareLoop lets parents build a living, searchable knowledge base about their child's care — medications, allergies, routines, behavioral notes — and share it instantly with any caregiver via a one-tap link. No login required for caregivers.
-
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
-[![Expo](https://img.shields.io/badge/Mobile-Expo%20SDK%2056-000020?style=flat-square&logo=expo)](https://expo.dev)
-[![Mem0](https://img.shields.io/badge/Memory-Mem0%20Cloud-6366F1?style=flat-square)](https://mem0.ai)
-[![Groq](https://img.shields.io/badge/LLM-Groq%20%20-F55036?style=flat-square)](https://groq.com)
-[![Firebase](https://img.shields.io/badge/DB-Firebase%20%2B%20Firestore-FFCA28?style=flat-square&logo=firebase)](https://firebase.google.com)
-
-</div>
+CareLoop is an AI-assisted care coordination platform for families and caregivers. Parents maintain a living knowledge base about their child's care — medications, allergies, routines, behavioral notes — and share it with caregivers instantly via a secure token link. No caregiver account required.
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Description |
 |---|---|
-| 🧠 **AI care memory** | Add care notes via text or voice. Mem0 stores and connects the facts. |
-| 💬 **Natural Q&A** | Ask "What time is the inhaler?" — get a precise, contextual answer. |
-| 📋 **Shift handover** | Auto-generated caregiver briefing from everything stored in the profile. |
-| 🚨 **Emergency card** | Critical allergies, meds, and contacts surfaced instantly. |
-| 🔗 **Link-based access** | Share access with caregivers via a token link — no account needed. |
-| 🔒 **Revocable access** | Instantly cut off a caregiver's access from the app. |
-| 🎙 **Voice input** | Record care updates; Groq Whisper transcribes and saves them. |
-| 📄 **Medical record upload** | PDF/image → OCR → cleaned by Groq → saved to care memory. |
+| AI care memory | Add care notes by voice or text. Mem0 stores and semantically indexes the facts. |
+| Natural language Q&A | Ask "What time is the inhaler?" and get a precise, context-grounded answer. |
+| Shift handover | Auto-generated briefing from everything stored in the profile, regenerated only when memory changes. |
+| Emergency card | Parent-authored card — allergies, medications, emergency contacts — shown to caregivers exactly as written. |
+| Link-based caregiver access | Share access via a one-tap token link. No caregiver account or password needed. |
+| IP-locked sessions | A caregiver token is bound to the first device that uses it. A second device is rejected until the parent generates a new link. |
+| Revocable access | Instantly cut off a caregiver's access from the parent dashboard. |
+| Voice input | Record care updates; Groq Whisper transcribes and saves them to memory. |
+| Medical record upload | PDF or image upload — OCR extracts text, Groq cleans it, Mem0 stores it. |
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Expo App (React Native)                                │
-│  Admin: add memory / manage links / chat / handover     │
-│  Caregiver: link-in welcome / shift handover / chat     │
-└──────────────────┬──────────────────────────────────────┘
-                   │ REST (EXPO_PUBLIC_API_URL)
-┌──────────────────▼──────────────────────────────────────┐
-│  FastAPI Backend                                        │
-│  ┌─────────────┐  ┌──────────────┐  ┌───────────────┐  │
-│  │  services/  │  │  services/   │  │  services/    │  │
-│  │  mem0.py    │  │  groq.py     │  │  firebase.py  │  │
-│  └──────┬──────┘  └──────┬───────┘  └──────┬────────┘  │
-└─────────│────────────────│─────────────────│───────────┘
-          │                │                 │
-    ┌─────▼──────┐  ┌──────▼──────┐  ┌──────▼──────┐
-    │ Mem0 Cloud │  │  Groq API   │  │  Firestore  │
-    │ (memory)   │  │ (LLM+STT)   │  │ (profiles + │
-    └────────────┘  └─────────────┘  │  cg tokens) │
-                                     └─────────────┘
+Expo App (React Native)
+  Parent:    add memory / manage links / emergency card / handover preview
+  Caregiver: token entry / shift handover / assistant chat / emergency card
+       |
+       | REST  (EXPO_PUBLIC_API_URL)
+       v
+FastAPI Backend
+  routes/profiles.py    — profile create / lookup
+  routes/memory.py      — POST /remember (text)
+  routes/voice.py       — POST /transcribe (audio -> Whisper -> memory)
+  routes/care.py        — GET /handover, GET+PUT /emergency, POST /chat
+  routes/links.py       — caregiver link CRUD
+  routes/caregiver.py   — caregiver-facing endpoints (token auth + IP lock)
+  routes/upload.py      — file upload -> OCR -> memory
+       |
+       +-- services/mem0.py      ->  Mem0 Cloud   (care memory storage + search)
+       +-- services/groq.py      ->  Groq API     (Whisper STT + Gemma LLM)
+       +-- services/firebase.py  ->  Firestore    (profiles, links, caches)
+       +-- services/ocr.py       ->  pypdf / Groq vision  (text extraction)
+       +-- services/care_memory.py  (orchestration layer)
 ```
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- Python 3.11+
-- Node.js 18+
-- Expo Go app on your phone (iOS or Android)
-- A Firebase project with Firestore enabled
+- Python 3.11 or later
+- Node.js 18 or later
+- Expo Go on an iOS or Android device
+- A Firebase project with Firestore enabled (database ID: `careloop-db`)
 - API keys for Mem0 Cloud and Groq
 
-### Backend Setup
+### Backend
 
 ```bash
 cd backend
 
-# Create virtual environment
 python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate     # macOS / Linux
 
-# Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
 cp .env.example .env
-# → Edit .env with your keys (see ENV table below)
+# Fill in all required values — see the Environment Variables table below
 
-# Add your Firebase service account JSON
-# Download from Firebase Console → Project Settings → Service Accounts
-# Save as: backend/firebase-service-account.json
-
-# Start the server
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Frontend Setup
+### Frontend
 
 ```bash
 cd frontend
 
-# Install dependencies
 npm install
 
-# Create your frontend env file
-echo "EXPO_PUBLIC_API_URL=http://<YOUR_LOCAL_IP>:8000" > .env
+# Set the backend URL in the frontend environment file
+# Use your machine's local network IP, not localhost, so the device can reach it
+echo "EXPO_PUBLIC_API_URL=http://192.168.x.x:8000" > .env
 
-# Start Expo dev server
 npx expo start --clear
-
-# Scan the QR code with Expo Go on your phone
+# Scan the QR code with Expo Go
 ```
-
-> **Tip:** Use your machine's local network IP (e.g. `192.168.1.x`), not `localhost`, so your phone can reach the backend.
 
 ---
 
-## 🔑 Environment Variables
+## Environment Variables
 
 ### `backend/.env`
 
-| Variable | Required | Description | Where to get it |
-|---|---|---|---|
-| `MEM0_API_KEY` | ✅ | Mem0 Cloud API key for care memory storage & search | [app.mem0.ai](https://app.mem0.ai) → API Keys |
-| `GROQ_API_KEY` | ✅ | Groq API key for Whisper transcription + Llama LLM | [console.groq.com](https://console.groq.com) → API Keys |
-| `GROQ_LLM_MODEL` | ⬜ | LLM model for phrasing responses | Default: `openai/gpt-oss-20b` |
-| `GROQ_WHISPER_MODEL` | ⬜ | Whisper model for voice transcription | Default: `whisper-large-v3-turbo` |
-| `FIREBASE_SERVICE_ACCOUNT_PATH` | ✅ | Path to Firebase service account JSON | Firebase Console → Project Settings → Service Accounts → Generate new private key |
-| `CAREGIVER_LINK_BASE_URL` | ⬜ | Deep link base for caregiver URLs | Default: `careloop://c` |
+| Variable | Required | Description |
+|---|---|---|
+| `MEM0_API_KEY` | Yes | Mem0 Cloud API key — [app.mem0.ai](https://app.mem0.ai) |
+| `GROQ_API_KEY` | Yes | Groq API key — [console.groq.com](https://console.groq.com) |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Yes | Path to the Firebase service account JSON file |
+| `GROQ_LLM_MODEL` | No | LLM model for response phrasing. Default: `meta-llama/llama-4-scout-17b-16e-instruct` |
+| `GROQ_WHISPER_MODEL` | No | Whisper model for voice transcription. Default: `whisper-large-v3-turbo` |
+| `CAREGIVER_LINK_BASE_URL` | No | Deep link base for caregiver token URLs. Default: `careloop://c` |
 
 ### `frontend/.env`
 
 | Variable | Required | Description |
 |---|---|---|
-| `EXPO_PUBLIC_API_URL` | ✅ | URL of your running FastAPI backend (e.g. `http://192.168.1.10:8080`) |
+| `EXPO_PUBLIC_API_URL` | Yes | URL of the running FastAPI backend, e.g. `http://192.168.1.10:8000` |
 
 ---
 
-## 📱 App Flow
+## App Flows
 
-### Admin (Parent)
+### Parent
 
-1. **Onboard** → create a care profile for your child
-2. **Add memory** → type or record care notes (allergies, medications, routines)
-3. **Upload records** → medical PDFs/images get OCR'd and saved to memory
-4. **Share link** → generate a one-tap link for your caregiver
-5. **Review** → preview the shift handover, test the assistant, check emergency card
+1. Create an account and set up a care profile for your child.
+2. Add care memories by voice or text — medications, allergies, routines, incidents.
+3. Upload medical records (PDF or image); text is extracted and saved to memory automatically.
+4. Write the emergency card — exactly what caregivers will see, no AI paraphrasing.
+5. Generate a caregiver link and share it. Revoke it at any time.
+6. Review the shift handover summary and test the assistant from the dashboard.
 
 ### Caregiver
 
-1. **Receive link** → tap the link the parent shared
-2. **Welcome screen** → enter your name, get the shift briefing instantly
-3. **Chat** → ask questions about the child's care during shift
-4. **Emergency** → tap to see critical allergies and contacts
+1. Tap the link the parent shared, or paste the token manually.
+2. Enter your name — the session is registered and your device IP is locked to the token.
+3. Read the shift handover briefing before starting.
+4. Use the assistant to ask questions about the child's care during the shift.
+5. Open the emergency card for instant access to critical information.
+6. End shift from the profile screen or the side menu.
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
 | Mobile app | Expo SDK 56 (React Native) |
 | Navigation | Expo Router v4 (file-based) |
 | Backend | FastAPI + Uvicorn |
-| Care memory | **Mem0 Cloud** — semantic memory storage & search |
-| LLM phrasing | **Groq** — Open AI gpt-oss-20b |
-| Voice STT | **Groq** — Whisper Large v3 Turbo |
-| Auth / DB | Firebase Authentication + Firestore |
-| File storage | Firebase Storage (medical record originals) |
+| Care memory | Mem0 Cloud — semantic storage and search |
+| LLM phrasing | Groq — Llama 4 Scout |
+| Voice transcription | Groq — Whisper Large v3 Turbo |
+| Authentication | Firebase Authentication (admin users only) |
+| App state | Firestore (profiles, caregiver links, handover cache) |
+| OCR | pypdf (PDF text extraction) + Groq vision (image OCR) |
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 careloop/
 ├── backend/
-│   ├── config.py               # Settings from .env
-│   ├── main.py                 # FastAPI app + CORS
+│   ├── config.py
+│   ├── main.py
 │   ├── requirements.txt
 │   ├── models/
-│   │   └── schemas.py          # Pydantic request/response models
+│   │   └── schemas.py
 │   ├── routes/
-│   │   ├── profiles.py         # Create/get care profiles
-│   │   ├── memory.py           # POST /remember (text)
-│   │   ├── voice.py            # POST /voice (audio → STT → memory)
-│   │   ├── care.py             # GET /handover, /chat, /emergency
-│   │   ├── links.py            # Caregiver link CRUD
-│   │   └── caregiver.py        # Caregiver-facing endpoints (token auth)
+│   │   ├── profiles.py
+│   │   ├── memory.py
+│   │   ├── voice.py
+│   │   ├── care.py
+│   │   ├── links.py
+│   │   ├── caregiver.py
+│   │   └── upload.py
 │   └── services/
-│       ├── mem0.py             # All Mem0 Cloud calls
-│       ├── groq.py             # All Groq calls (Whisper + LLM)
-│       └── firebase.py         # Firestore + Auth helpers
+│       ├── mem0.py
+│       ├── groq.py
+│       ├── firebase.py
+│       ├── ocr.py
+│       └── care_memory.py
 │
 └── frontend/
+    ├── assets/
+    │   ├── logo.png
+    │   └── logo_with_name.png
     └── src/
         ├── app/
-        │   ├── (admin)/        # Parent screens
-        │   ├── (caregiver)/    # Caregiver screens
-        │   ├── (auth)/         # Login / signup
-        │   └── onboarding/     # First-run flow
-        ├── components/         # Reusable UI components
-        ├── constants/          # Theme, typography
-        ├── context/            # SessionContext (auth state)
+        │   ├── (admin)/        — parent screens
+        │   ├── (caregiver)/    — caregiver screens
+        │   ├── (auth)/         — login and sign-up
+        │   └── onboarding/     — first-run flow
+        ├── components/
+        ├── constants/          — design tokens (theme.ts)
+        ├── context/            — SessionContext
         └── services/
-            └── api.ts          # All backend API calls
+            ├── api.ts          — all backend calls
+            └── cache.ts        — AsyncStorage cache for handover and emergency card
 ```
 
 ---
 
-## 🔐 Security Notes
+## Security
 
-- **Caregiver tokens** are validated server-side on every request — revoked tokens fail immediately
-- **Admin auth** uses Firebase Authentication
-- **API keys** are never committed — use `.env` (gitignored)
-- Firebase service account JSON is gitignored
+- Caregiver tokens are validated server-side on every request. Revoked tokens fail immediately.
+- A token is bound to the first IP address that uses it. Any subsequent request from a different IP is rejected with a clear error message.
+- Admin authentication uses Firebase Authentication. Caregivers do not have accounts.
+- API keys and the Firebase service account file are excluded from version control via `.gitignore`.
 
 ---
 
-## 📄 License
+## License
 
-MIT — built for the hackathon. See [LICENSE](frontend/LICENSE).
+MIT
