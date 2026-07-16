@@ -31,8 +31,8 @@ export default function CaregiverEmergencyScreen() {
         return;
       }
 
-      // 2. Cache miss — fetch (backend returns from its own Firestore cache
-      //    when memory hasn't changed, so slow Groq calls are rare)
+      // 2. Cache miss — fetch from backend (pure Firestore read, no LLM).
+      //    Returns whatever the parent last saved — deterministic and fast.
       try {
         const res = await api.caregiverEmergency(caregiverToken);
         setContent(res.content);
@@ -81,7 +81,10 @@ export default function CaregiverEmergencyScreen() {
           </Card>
         ) : (
           <Card soft padding="md">
-            <Text style={styles.emptyText}>No emergency information available yet.</Text>
+            <Text style={styles.emptyText}>
+            The parent hasn't written an emergency card yet.
+            Ask them to fill it in from their CareLoop app.
+          </Text>
           </Card>
         )}
       </Screen>

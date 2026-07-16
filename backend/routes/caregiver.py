@@ -90,7 +90,7 @@ async def caregiver_emergency(
 ) -> EmergencyCardResponse:
     profile_id = await _profile_from_token(x_caregiver_token, _get_client_ip(request))
     try:
-        content = await care_memory.generate_emergency_card(profile_id)
-    except (Mem0Error, GroqError) as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    return EmergencyCardResponse(content=content)
+        content = await care_memory.get_emergency_card(profile_id)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not load emergency card.") from exc
+    return EmergencyCardResponse(content=content or "")

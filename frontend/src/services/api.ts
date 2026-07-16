@@ -125,6 +125,13 @@ export const api = {
   getEmergency: (profileId: string) =>
     request<{ content: string }>(`/profiles/${profileId}/emergency`),
 
+  setEmergency: (profileId: string, uid: string, content: string) =>
+    request<{ content: string }>(`/profiles/${profileId}/emergency`, {
+      method: "PUT",
+      body: { content },
+      uid,
+    }),
+
   createLink: (profileId: string) =>
     request<CaregiverLink>(
       `/profiles/${profileId}/links`,

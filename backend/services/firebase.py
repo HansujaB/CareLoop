@@ -204,22 +204,17 @@ async def set_handover_cache(profile_id: str, summary: str, version: int) -> Non
     })
 
 
-async def get_emergency_cache(profile_id: str) -> tuple[str | None, int, int]:
-    """Returns (cached_content, emergency_version, memory_version)."""
+async def get_emergency_card(profile_id: str) -> str | None:
+    """Return the parent-authored emergency card text, or None if not set."""
     db = _db()
     snap = db.collection(PROFILES).document(profile_id).get()
     data = snap.to_dict() or {}
-    return (
-        data.get("emergency_cache"),
-        data.get("emergency_version", -1),
-        data.get("memory_version", 0),
-    )
+    return data.get("emergency_card") or None
 
 
-async def set_emergency_cache(profile_id: str, content: str, version: int) -> None:
-    """Persist the generated emergency card and the version it was generated at."""
+async def set_emergency_card(profile_id: str, content: str) -> None:
+    """Persist the parent-authored emergency card text."""
     db = _db()
     db.collection(PROFILES).document(profile_id).update({
-        "emergency_cache": content,
-        "emergency_version": version,
+        "emergency_card": content.strip(),
     })

@@ -11,10 +11,6 @@ HANDOVER_QUERY = (
     "recent updates or incidents."
 )
 
-EMERGENCY_QUERY = (
-    "List all emergency information: allergies, current medications, blood group, "
-    "emergency contacts with phone numbers, and any critical medical instructions."
-)
 
 HANDOVER_SYSTEM = (
     "You write shift handover briefings for caregivers. Use only the provided context. "
@@ -28,14 +24,6 @@ CHAT_SYSTEM = (
     "Be concise, practical, and friendly. Output plain text only — no bold, no asterisks, "
     "no headers, no markdown formatting of any kind. "
     "If the context does not contain the answer, say you do not have that information in the care profile."
-)
-
-EMERGENCY_SYSTEM = (
-    "You generate emergency care cards for caregivers. Use only the provided context. "
-    "Output plain text only — no bold, no asterisks, no headers with # symbols, no horizontal lines, "
-    "no markdown formatting. You may use plain bullet points (a hyphen followed by a space) "
-    "to list items within a category, but category names should just be plain text on their own line. "
-    "Omit any category that has no data in the context."
 )
 
 
@@ -77,12 +65,11 @@ async def generate_handover(profile_id: str) -> str:
     return summary
 
 
-async def generate_emergency_card(profile_id: str) -> str:
-    context = await mem0.recall(EMERGENCY_QUERY, mem0_user_id(profile_id))
-    if not context:
-        return "No emergency information available yet."
-    return await groq.phrase_response(
-        system_prompt=EMERGENCY_SYSTEM,
-        user_prompt=f"Context:\n{context}",
-        max_tokens=400,
-    )
+async def get_emergency_card(profile_id: str) -> str | None:
+    """Return the parent-authored emergency card, or None if not written yet."""
+    return await firebase.get_emergency_card(profile_id)
+
+
+async def set_emergency_card(profile_id: str, content: str) -> None:
+    """Save the parent-authored emergency card to Firestore."""
+    await firebase.set_emergency_card(profile_id, content)

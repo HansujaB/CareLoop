@@ -52,5 +52,9 @@ class CaregiverSessionRequest(BaseModel):
     caregiver_name: str = Field(min_length=1, max_length=80)
 
 
+class SetEmergencyCardRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=4000)
+
+
 class ErrorResponse(BaseModel):
     detail: str
