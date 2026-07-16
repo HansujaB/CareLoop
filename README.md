@@ -1,6 +1,18 @@
+<div align="center">
+
 # CareLoop
 
-CareLoop is an AI-assisted care coordination platform for families and caregivers. Parents maintain a living knowledge base about their child's care — medications, allergies, routines, behavioral notes — and share it with caregivers instantly via a secure token link. No caregiver account required.
+**AI-powered care memory for families and caregivers.**
+
+CareLoop lets parents build a living, searchable knowledge base about their child's care — medications, allergies, routines, behavioral notes — and share it instantly with any caregiver via a secure token link. No login required for caregivers.
+
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Expo](https://img.shields.io/badge/Mobile-Expo%20SDK%2056-000020?style=flat-square&logo=expo)](https://expo.dev)
+[![Mem0](https://img.shields.io/badge/Memory-Mem0%20Cloud-6366F1?style=flat-square)](https://mem0.ai)
+[![Groq](https://img.shields.io/badge/LLM-Groq%20%20-F55036?style=flat-square)](https://groq.com)
+[![Firebase](https://img.shields.io/badge/DB-Firebase%20%2B%20Firestore-FFCA28?style=flat-square&logo=firebase)](https://firebase.google.com)
+
+</div>
 
 ---
 
