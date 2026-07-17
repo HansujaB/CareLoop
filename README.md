@@ -156,7 +156,7 @@ npx expo start --clear
 | Navigation | Expo Router v4 (file-based) |
 | Backend | FastAPI + Uvicorn |
 | Care memory | Mem0 Cloud — semantic storage and search |
-| LLM phrasing | Groq — Llama 4 Scout |
+| LLM phrasing | Groq — openai/gpt-oss-20b |
 | Voice transcription | Groq — Whisper Large v3 Turbo |
 | Authentication | Firebase Authentication (admin users only) |
 | App state | Firestore (profiles, caregiver links, handover cache) |
