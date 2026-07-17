@@ -13,8 +13,10 @@ CareLoop lets parents build a living, searchable knowledge base about their chil
 [![Firebase](https://img.shields.io/badge/DB-Firebase%20%2B%20Firestore-FFCA28?style=flat-square&logo=firebase)](https://firebase.google.com)
 
 </div>
+<div align="center"> 
+  Demo:  https://youtube.com/shorts/1BCZu9-OWrM?feature=share
+</div>
 
----
 
 ## Features
 
