@@ -12,7 +12,7 @@
 import { Image, StyleSheet, View } from "react-native";
 
 const LOGO_WITH_NAME = require("../../assets/logo_with_name.png");
-const LOGO_ICON      = require("../../assets/logo.png");
+const LOGO_ICON = require("../../assets/logo.png");
 
 type LogoProps = {
   /** Height of the rendered wordmark. Width is derived from the image's natural aspect ratio. */
