@@ -18,6 +18,10 @@ import io
 import logging
 from typing import Literal
 
+import httpx
+
+from config import settings
+
 logger = logging.getLogger(__name__)
 
 # PDF support — optional; degrade gracefully if pypdf not installed
@@ -59,10 +63,6 @@ def _pdf_to_text(data: bytes) -> str:
 
 async def _image_to_text(data: bytes, content_type: str) -> str:
     """Send image to Groq vision model and extract text."""
-    from services.groq import phrase_response, GroqError  # local import to avoid circular
-    import httpx
-    from config import settings
-
     b64 = base64.b64encode(data).decode("utf-8")
     data_url = f"data:{content_type};base64,{b64}"
 

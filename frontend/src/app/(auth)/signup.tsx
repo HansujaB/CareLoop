@@ -45,12 +45,11 @@ export default function SignupScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.header}>
-        <Logo />
-        <Text style={styles.title}>Create your account</Text>
-        <Text style={styles.subtitle}>For parents and adult children managing care.</Text>
+      {/* Logo centred above the form — no title text */}
+      <View style={styles.logoWrap}>
+        <Logo height={60} />
       </View>
 
       <View style={styles.form}>
@@ -96,13 +95,14 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
     justifyContent: "center",
     gap: spacing.xl,
   },
-  header: { gap: spacing.sm },
-  title: { ...typography.h1, color: colors.text, marginTop: spacing.md },
-  subtitle: { ...typography.body, color: colors.textSecondary },
+  logoWrap: {
+    alignItems: "center",
+    paddingBottom: spacing.sm,
+  },
   form: { gap: spacing.md },
   errorText: { ...typography.bodySmall, color: colors.danger },
   footer: { ...typography.bodySmall, color: colors.textSecondary, textAlign: "center" },

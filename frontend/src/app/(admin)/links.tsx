@@ -1,6 +1,6 @@
 import Ionicons from "@/components/Ionicons";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Share, StyleSheet, Text, View } from "react-native";
 import { Card } from "@/components/ui/Card";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SecondaryButton } from "@/components/ui/SecondaryButton";
@@ -10,7 +10,7 @@ import { api, type CaregiverLink } from "@/services/api";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 
 export default function LinksScreen() {
-  const { profileId, profileName } = useSession();
+  const { profileId, profileName, firebaseUser } = useSession();
   const [links, setLinks] = useState<CaregiverLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -18,16 +18,16 @@ export default function LinksScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadLinks = useCallback(async () => {
-    if (!profileId) return;
+    if (!profileId || !firebaseUser?.uid) return;
     try {
-      const data = await api.listLinks(profileId);
+      const data = await api.listLinks(profileId, firebaseUser.uid);
       setLinks(data);
     } catch {
       // silent — empty list shown
     } finally {
       setLoading(false);
     }
-  }, [profileId]);
+  }, [profileId, firebaseUser?.uid]);
 
   // Initial load + poll every 8 s so caregiver names update in near-real-time
   useEffect(() => {
@@ -39,10 +39,10 @@ export default function LinksScreen() {
   }, [loadLinks]);
 
   const generateLink = async () => {
-    if (!profileId || generating) return;
+    if (!profileId || !firebaseUser?.uid || generating) return;
     setGenerating(true);
     try {
-      const link = await api.createLink(profileId);
+      const link = await api.createLink(profileId, firebaseUser.uid);
       setLinks((prev) => [link, ...prev]);
     } catch {
       // ignore for now
@@ -52,9 +52,9 @@ export default function LinksScreen() {
   };
 
   const revokeLink = async (linkId: string) => {
-    if (!profileId) return;
+    if (!profileId || !firebaseUser?.uid) return;
     try {
-      await api.revokeLink(profileId, linkId);
+      await api.revokeLink(profileId, firebaseUser.uid, linkId);
       setLinks((prev) => prev.filter((l) => l.link_id !== linkId));
     } catch {
       // ignore
@@ -72,8 +72,11 @@ export default function LinksScreen() {
         // ignore
       }
     } else {
-      const { Share } = await import("react-native");
-      await Share.share({ message });
+      try {
+        await Share.share({ message });
+      } catch {
+        // user dismissed share sheet — not an error
+      }
     }
   };
 

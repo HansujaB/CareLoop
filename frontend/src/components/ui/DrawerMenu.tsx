@@ -96,7 +96,7 @@ export function DrawerMenu({ visible, onClose }: Props) {
     setTimeout(() => router.replace("/(auth)/login"), 200);
   };
 
-  if (!visible && translateX._value === -DRAWER_WIDTH) return null;
+  if (!visible) return null;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={visible ? "auto" : "none"}>
@@ -176,7 +176,11 @@ export function DrawerMenu({ visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "rgba(0,0,0,0.4)",
   },
   drawer: {

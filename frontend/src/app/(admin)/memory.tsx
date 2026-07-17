@@ -17,18 +17,18 @@ const MODES = [
 ];
 
 export default function MemoryScreen() {
-  const { profileId, profileName } = useSession();
+  const { profileId, profileName, firebaseUser } = useSession();
   const [mode, setMode] = useState("text");
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
 
   const saveMemory = async () => {
-    if (!text.trim() || !profileId || saving) return;
+    if (!text.trim() || !profileId || !firebaseUser?.uid || saving) return;
     setSaving(true);
     setStatus("idle");
     try {
-      await api.rememberText(profileId, text.trim());
+      await api.rememberText(profileId, firebaseUser.uid, text.trim());
       setStatus("saved");
       setText("");
       setTimeout(() => setStatus("idle"), 3000);
@@ -70,9 +70,9 @@ export default function MemoryScreen() {
             icon={<Ionicons name="cloud-upload-outline" size={18} color={colors.white} />}
           />
         </Card>
-      ) : profileId ? (
+      ) : profileId && firebaseUser?.uid ? (
         <Card style={styles.block} padding="md">
-          <VoiceRecorder profileId={profileId} />
+          <VoiceRecorder profileId={profileId} firebaseUid={firebaseUser.uid} />
         </Card>
       ) : null}
     </Screen>

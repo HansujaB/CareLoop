@@ -26,7 +26,7 @@ const GREETING: Message = {
 };
 
 export default function ChatScreen() {
-  const { profileId } = useSession();
+  const { profileId, firebaseUser } = useSession();
   const [messages, setMessages] = useState<Message[]>([GREETING]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -34,15 +34,14 @@ export default function ChatScreen() {
 
   const send = async () => {
     const question = input.trim();
-    if (!question || sending || !profileId) return;
-
+    if (!question || sending || !profileId || !firebaseUser) return;
     const userMsg: Message = { id: Date.now().toString(), role: "user", text: question };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setSending(true);
 
     try {
-      const res = await api.chat(profileId, question);
+      const res = await api.chat(profileId, firebaseUser.uid, question);
       const assistantMsg: Message = {
         id: `${Date.now()}-a`,
         role: "assistant",

@@ -12,7 +12,7 @@
 import Ionicons from "@/components/Ionicons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IllustrationHero } from "@/components/ui/IllustrationHero";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
@@ -23,7 +23,7 @@ import { colors, spacing, typography } from "@/constants/theme";
 
 export default function CaregiverWelcomeScreen() {
   const insets = useSafeAreaInsets();
-  const { caregiverToken, caregiverName, setCaregiverName, setCaregiverToken } = useSession();
+  const { caregiverToken, caregiverName, setCaregiverName, setCaregiverToken, setRole } = useSession();
   const [name, setName] = useState("");
   const [token, setToken] = useState("");       // empty — caregiver must paste their real token
   const [submitting, setSubmitting] = useState(false);
@@ -38,6 +38,11 @@ export default function CaregiverWelcomeScreen() {
       router.replace("/(caregiver)/(tabs)/handover");
     }
   }, [caregiverToken, caregiverName]);
+
+  const goBack = () => {
+    setRole("none");
+    router.back();
+  };
 
   const enter = async () => {
     if (!name.trim()) {
@@ -65,58 +70,77 @@ export default function CaregiverWelcomeScreen() {
   };
 
   return (
-    <View
-      style={[
-        styles.screen,
-        { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg },
-      ]}
+    <KeyboardAvoidingView
+      style={styles.kav}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <IllustrationHero
-        icon="hand-left-outline"
-        title="You're covering a shift"
-        subtitle="Enter your name and paste the care link token the parent shared with you."
-      />
+      <View
+        style={[
+          styles.screen,
+          { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg },
+        ]}
+      >
+        {/* Back to login */}
+        <Pressable onPress={goBack} style={styles.backBtn} hitSlop={12}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textSecondary} />
+          <Text style={styles.backText}>Back to login</Text>
+        </Pressable>
 
-      <View style={styles.form}>
-        <TextField
-          label="Your name"
-          value={name}
-          onChangeText={setName}
-          placeholder="e.g. Sam"
-        />
-        <TextField
-          label="Care link token"
-          value={token}
-          onChangeText={setToken}
-          placeholder="Paste token from parent's shared link"
-          autoCapitalize="none"
-          autoCorrect={false}
-          hint="Tap 'Share' on the parent's Caregiver links screen to copy your token."
+        <IllustrationHero
+          icon="hand-left-outline"
+          title="You're covering a shift"
+          subtitle="Enter your name and paste the care link token the parent shared with you."
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <View style={styles.form}>
+          <TextField
+            label="Your name"
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g. Sam"
+          />
+          <TextField
+            label="Care link token"
+            value={token}
+            onChangeText={setToken}
+            placeholder="Paste token from parent's shared link"
+            autoCapitalize="none"
+            autoCorrect={false}
+            hint="Tap 'Share' on the parent's Caregiver links screen to copy your token."
+          />
 
-        <PrimaryButton
-          label={submitting ? "Verifying…" : "Enter shift"}
-          onPress={enter}
-          icon={
-            submitting
-              ? <ActivityIndicator size="small" color={colors.white} />
-              : <Ionicons name="arrow-forward" size={18} color={colors.white} />
-          }
-        />
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <PrimaryButton
+            label={submitting ? "Verifying…" : "Enter shift"}
+            onPress={enter}
+            icon={
+              submitting
+                ? <ActivityIndicator size="small" color={colors.white} />
+                : <Ionicons name="arrow-forward" size={18} color={colors.white} />
+            }
+          />
+        </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  kav: { flex: 1, backgroundColor: colors.background },
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
     paddingHorizontal: spacing.md,
     justifyContent: "space-between",
   },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    alignSelf: "flex-start",
+    paddingVertical: spacing.sm,
+  },
+  backText: { ...typography.bodySmall, color: colors.textSecondary },
   form: { gap: spacing.md },
   error: {
     ...typography.bodySmall,

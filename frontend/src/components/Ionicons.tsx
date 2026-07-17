@@ -1,15 +1,18 @@
 import IoniconsLib from "@react-native-vector-icons/ionicons";
 
-// Export an empty glyphMap for compatibility with
-// `keyof typeof glyphMap` type annotations elsewhere.
+// Reference list of icons used in the project (not exhaustive).
+// name is typed as string so any valid Ionicons name works without TS errors.
 export const glyphMap = {
   "arrow-forward": true,
   "arrow-back": true,
+  "arrow-back-outline": true,
   "chevron-forward": true,
   "chevron-back": true,
 
   "send": true,
   "add-outline": true,
+  "close": true,
+  "close-outline": true,
   "close-circle-outline": true,
   "share-outline": true,
 
@@ -37,10 +40,20 @@ export const glyphMap = {
   "ellipse-outline": true,
   "search-outline": true,
   "settings-outline": true,
+  "menu-outline": true,
+  "checkmark": true,
+  "checkmark-circle-outline": true,
+  "alert-circle-outline": true,
+  "information-circle-outline": true,
+  "hand-left-outline": true,
+  "key-outline": true,
+  "hourglass-outline": true,
+  "refresh-outline": true,
+  "sparkles-outline": true,
 } as const;
 
 type Props = {
-  name: keyof typeof glyphMap;
+  name: string;  // any valid Ionicons icon name
   size?: number;
   color?: string;
 };
@@ -52,7 +65,7 @@ export default function Ionicons({
 }: Props) {
   return (
     <IoniconsLib
-      name={name}
+      name={name as any}
       size={size}
       color={color}
     />

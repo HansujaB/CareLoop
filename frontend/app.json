@@ -6,6 +6,11 @@
     "orientation": "portrait",
     "scheme": "careloop",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logo_with_name.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/android-icon-foreground.png",

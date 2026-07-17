@@ -82,6 +82,12 @@ async def get_profile_by_uid(uid: str) -> dict[str, Any] | None:
     return {"profile_id": snap.id, **data}
 
 
+async def assign_admin_uid(profile_id: str, uid: str) -> None:
+    """Attach a Firebase UID to a profile that was created before auth was wired."""
+    db = _db()
+    db.collection(PROFILES).document(profile_id).update({"admin_uid": uid})
+
+
 async def create_caregiver_link(profile_id: str) -> dict[str, Any]:
     profile = await get_profile(profile_id)
     if not profile:

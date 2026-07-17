@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from config import settings
+from deps.profile_auth import require_owned_profile
 from models.schemas import CaregiverLinkResponse
 from services import firebase
 from services.firebase import FirestoreError
@@ -9,7 +10,10 @@ router = APIRouter(prefix="/profiles/{profile_id}/links", tags=["links"])
 
 
 @router.post("", response_model=CaregiverLinkResponse)
-async def create_link(profile_id: str) -> CaregiverLinkResponse:
+async def create_link(
+    profile_id: str,
+    _profile: dict = Depends(require_owned_profile),
+) -> CaregiverLinkResponse:
     try:
         link = await firebase.create_caregiver_link(profile_id)
     except FirestoreError as exc:
@@ -24,7 +28,10 @@ async def create_link(profile_id: str) -> CaregiverLinkResponse:
 
 
 @router.get("", response_model=list[CaregiverLinkResponse])
-async def list_links(profile_id: str) -> list[CaregiverLinkResponse]:
+async def list_links(
+    profile_id: str,
+    _profile: dict = Depends(require_owned_profile),
+) -> list[CaregiverLinkResponse]:
     try:
         links = await firebase.list_caregiver_links(profile_id)
     except FirestoreError as exc:
@@ -43,7 +50,11 @@ async def list_links(profile_id: str) -> list[CaregiverLinkResponse]:
 
 
 @router.delete("/{link_id}")
-async def revoke_link(profile_id: str, link_id: str) -> dict[str, bool]:
+async def revoke_link(
+    profile_id: str,
+    link_id: str,
+    _profile: dict = Depends(require_owned_profile),
+) -> dict[str, bool]:
     try:
         await firebase.revoke_caregiver_link(profile_id, link_id)
     except FirestoreError as exc:

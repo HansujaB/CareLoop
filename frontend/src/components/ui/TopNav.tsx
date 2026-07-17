@@ -6,7 +6,6 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 type Props = {
   title?: string;
   subtitle?: string;
-  /** Show the full wordmark (logo + name) when there is no hamburger. Default true. */
   showLogo?: boolean;
   onMenuPress?: () => void;
   rightSlot?: React.ReactNode;
@@ -21,18 +20,12 @@ export function TopNav({
 }: Props) {
   return (
     <View style={styles.container}>
+      {/* Left — hamburger (if present) + title block */}
       <View style={styles.left}>
         {onMenuPress ? (
-          // Hamburger screens: small icon mark + hamburger button
-          <>
-            <Pressable onPress={onMenuPress} style={styles.iconBtn} hitSlop={12}>
-              <Ionicons name="menu-outline" size={24} color={colors.text} />
-            </Pressable>
-            <LogoMark size={28} />
-          </>
-        ) : showLogo ? (
-          // No hamburger: full wordmark fills the left side
-          <Logo height={28} />
+          <Pressable onPress={onMenuPress} style={styles.iconBtn} hitSlop={12}>
+            <Ionicons name="menu-outline" size={24} color={colors.text} />
+          </Pressable>
         ) : null}
 
         {(title || subtitle) ? (
@@ -43,10 +36,15 @@ export function TopNav({
         ) : null}
       </View>
 
-      {/* Right slot for any optional action buttons — no avatar */}
-      {rightSlot ? (
-        <View style={styles.right}>{rightSlot}</View>
-      ) : null}
+      {/* Right — logo mark (screens with hamburger) or full wordmark (standalone screens) */}
+      <View style={styles.right}>
+        {rightSlot ? rightSlot : null}
+        {showLogo ? (
+          onMenuPress
+            ? <LogoMark size={30} />          // hamburger screen: compact icon on right
+            : <Logo height={26} />            // standalone screen: wordmark on right
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -67,9 +65,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleBlock: { flex: 1 },
-  title:    { ...typography.h3,    color: colors.text },
+  title:    { ...typography.h3,      color: colors.text },
   subtitle: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
-  right: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  right: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flexShrink: 0,
+  },
   iconBtn: {
     width: 40,
     height: 40,

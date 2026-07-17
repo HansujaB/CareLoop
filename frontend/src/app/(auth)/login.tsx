@@ -41,18 +41,17 @@ export default function LoginScreen() {
 
   const continueAsCaregiver = () => {
     setRole("caregiver");
-    router.replace("/(caregiver)/welcome");
+    router.push("/(caregiver)/welcome");
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.header}>
-        <Logo />
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Sign in to manage care profiles and share links.</Text>
+      {/* Logo centred above the form — no title text */}
+      <View style={styles.logoWrap}>
+        <Logo height={60} />
       </View>
 
       <View style={styles.form}>
@@ -102,13 +101,14 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
     justifyContent: "center",
     gap: spacing.xl,
   },
-  header: { gap: spacing.sm },
-  title: { ...typography.h1, color: colors.text, marginTop: spacing.md },
-  subtitle: { ...typography.body, color: colors.textSecondary },
+  logoWrap: {
+    alignItems: "center",
+    paddingBottom: spacing.sm,
+  },
   form: { gap: spacing.md },
   errorText: { ...typography.bodySmall, color: colors.danger },
   footer: { ...typography.bodySmall, color: colors.textSecondary, textAlign: "center" },

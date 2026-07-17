@@ -15,11 +15,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from services import care_memory, firebase
-from services.firebase import FirestoreError
+from deps.profile_auth import require_owned_profile
+from services import care_memory
 from services import ocr as ocr_service
 from services.ocr import OCRError
 from services.mem0 import Mem0Error
@@ -49,20 +49,8 @@ class UploadResponse(BaseModel):
 async def upload_medical_record(
     profile_id: str,
     file: UploadFile = File(...),
-    x_firebase_uid: str | None = Header(default=None),
+    _profile: dict = Depends(require_owned_profile),
 ) -> UploadResponse:
-    # ── Auth: caller must own the profile ──────────────────────────────────
-    if not x_firebase_uid:
-        raise HTTPException(status_code=401, detail="X-Firebase-UID header required.")
-    try:
-        profile = await firebase.get_profile(profile_id)
-    except FirestoreError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found.")
-    if profile.get("admin_uid") != x_firebase_uid:
-        raise HTTPException(status_code=403, detail="You do not own this profile.")
-
     # ── Validation ──────────────────────────────────────────────────────────
     content_type = file.content_type or ""
     filename = file.filename or "upload"

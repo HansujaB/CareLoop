@@ -12,7 +12,7 @@ import { api } from "@/services/api";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function AdminHomeScreen() {
-  const { profileId, profileName, authLoading, profileLoading, profileRecovering } = useSession();
+  const { profileId, profileName, firebaseUser, authLoading, profileLoading, profileRecovering } = useSession();
   const [handover, setHandover] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,13 +25,13 @@ export default function AdminHomeScreen() {
   }, [authLoading, profileLoading, profileRecovering, profileId]);
 
   useEffect(() => {
-    if (!profileId) return;
+    if (!profileId || !firebaseUser) return;
     setLoading(true);
-    api.getHandover(profileId)
+    api.getHandover(profileId, firebaseUser.uid)
       .then((res) => setHandover(res.summary))
       .catch(() => setHandover(null))
       .finally(() => setLoading(false));
-  }, [profileId]);
+  }, [profileId, firebaseUser]);
 
   const displayName = profileName || "your child";
 

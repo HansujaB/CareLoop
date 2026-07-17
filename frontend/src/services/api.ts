@@ -11,10 +11,14 @@ function uploadFile<T>(
   fieldName: string,
   fileName: string,
   mimeType: string,
+  uid?: string,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${BASE_URL}${path}`);
+    if (uid) {
+      xhr.setRequestHeader("X-Firebase-UID", uid);
+    }
     xhr.responseType = "text";
 
     xhr.onload = () => {
@@ -101,29 +105,31 @@ export const api = {
       uid,
     }),
 
-  rememberText: (profileId: string, text: string) =>
-    request(`/profiles/${profileId}/remember`, { body: { text } }),
+  rememberText: (profileId: string, uid: string, text: string) =>
+    request(`/profiles/${profileId}/remember`, { body: { text }, uid }),
 
   /** Upload a recorded audio file URI and get back the Whisper transcript. */
-  transcribeVoice: (profileId: string, fileUri: string) =>
+  transcribeVoice: (profileId: string, uid: string, fileUri: string) =>
     uploadFile<{ text: string }>(
       `/profiles/${profileId}/transcribe`,
       fileUri,
       "audio",
       "recording.m4a",
       "audio/m4a",
+      uid,
     ),
 
-  getHandover: (profileId: string) =>
-    request<{ summary: string }>(`/profiles/${profileId}/handover`),
+  getHandover: (profileId: string, uid: string) =>
+    request<{ summary: string }>(`/profiles/${profileId}/handover`, { uid }),
 
-  chat: (profileId: string, question: string) =>
+  chat: (profileId: string, uid: string, question: string) =>
     request<{ answer: string }>(`/profiles/${profileId}/chat`, {
       body: { question },
+      uid,
     }),
 
-  getEmergency: (profileId: string) =>
-    request<{ content: string }>(`/profiles/${profileId}/emergency`),
+  getEmergency: (profileId: string, uid: string) =>
+    request<{ content: string }>(`/profiles/${profileId}/emergency`, { uid }),
 
   setEmergency: (profileId: string, uid: string, content: string) =>
     request<{ content: string }>(`/profiles/${profileId}/emergency`, {
@@ -132,19 +138,20 @@ export const api = {
       uid,
     }),
 
-  createLink: (profileId: string) =>
+  createLink: (profileId: string, uid: string) =>
     request<CaregiverLink>(
       `/profiles/${profileId}/links`,
-      { method: "POST" },
+      { method: "POST", uid },
     ),
 
-  listLinks: (profileId: string) =>
+  listLinks: (profileId: string, uid: string) =>
     request<CaregiverLink[]>(
       `/profiles/${profileId}/links`,
+      { uid },
     ),
 
-  revokeLink: (profileId: string, linkId: string) =>
-    request(`/profiles/${profileId}/links/${linkId}`, { method: "DELETE" }),
+  revokeLink: (profileId: string, uid: string, linkId: string) =>
+    request(`/profiles/${profileId}/links/${linkId}`, { method: "DELETE", uid }),
 
   caregiverSession: (token: string, caregiverName: string) =>
     request("/caregiver/session", {

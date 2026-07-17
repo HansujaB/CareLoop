@@ -26,7 +26,7 @@ type VoiceState =
   | "saved"
   | "error";
 
-type Props = { profileId: string };
+type Props = { profileId: string; firebaseUid: string };
 
 // Copy maps
 
@@ -69,7 +69,7 @@ const IS_WEB = Platform.OS === "web";
 
 // Component
 
-export function VoiceRecorder({ profileId }: Props) {
+export function VoiceRecorder({ profileId, firebaseUid }: Props) {
   // expo-audio recorder hook – manages lifecycle automatically
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
@@ -128,7 +128,7 @@ export function VoiceRecorder({ profileId }: Props) {
         return;
       }
 
-      const { text } = await api.transcribeVoice(profileId, uri);
+      const { text } = await api.transcribeVoice(profileId, firebaseUid, uri);
       setTranscribedText(text);
       setState("review");
     } catch (err) {
@@ -138,7 +138,7 @@ export function VoiceRecorder({ profileId }: Props) {
       );
       setState("error");
     }
-  }, [recorder, profileId]);
+  }, [recorder, profileId, firebaseUid]);
 
   const toggleRecording = useCallback(() => {
     if (recorderState.isRecording) {
@@ -154,7 +154,7 @@ export function VoiceRecorder({ profileId }: Props) {
     if (!transcribedText.trim()) return;
     setState("saving");
     try {
-      await api.rememberText(profileId, transcribedText.trim());
+      await api.rememberText(profileId, firebaseUid, transcribedText.trim());
       setState("saved");
       setTimeout(() => {
         setState("idle");
@@ -167,7 +167,7 @@ export function VoiceRecorder({ profileId }: Props) {
       );
       setState("error");
     }
-  }, [profileId, transcribedText]);
+  }, [profileId, firebaseUid, transcribedText]);
 
   const discard = useCallback(() => {
     setTranscribedText("");

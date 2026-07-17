@@ -8,21 +8,21 @@ import { api } from "@/services/api";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function HandoverScreen() {
-  const { profileId } = useSession();
+  const { profileId, firebaseUser } = useSession();
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!profileId) {
+    if (!profileId || !firebaseUser) {
       setLoading(false);
       return;
     }
-    api.getHandover(profileId)
+    api.getHandover(profileId, firebaseUser.uid)
       .then((res) => setSummary(res.summary))
       .catch((err) => setError(err.message ?? "Failed to load handover."))
       .finally(() => setLoading(false));
-  }, [profileId]);
+  }, [profileId, firebaseUser]);
 
   return (
     <Screen navTitle="Shift handover" navSubtitle="What caregivers see at shift start">

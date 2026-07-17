@@ -14,6 +14,7 @@ type Props = ViewProps & {
   showNav?: boolean;
   showMenu?: boolean;
   bottomInset?: number;
+  avatarInitials?: string;
   /** Override the menu-button handler. When provided the built-in DrawerMenu is NOT rendered. */
   onMenuPress?: () => void;
 };
@@ -28,6 +29,7 @@ export function Screen({
   showMenu = true,
   bottomInset = 32,
   style,
+  avatarInitials: _avatarInitials,  // accepted but unused — caregiver screens pass this
   onMenuPress: externalMenuPress,
 }: Props) {
   const insets = useSafeAreaInsets();

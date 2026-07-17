@@ -1,36 +1,40 @@
 /**
  * Logo components backed by the real image assets in /assets.
  *
- *   <Logo />          — wordmark version (icon + "CareLoop" text), used on auth screens
- *   <LogoMark />      — icon-only, used in the TopNav when a hamburger is also present
+ *   <Logo />      — full wordmark (icon + "CareLoop" text), login / auth screens
+ *   <LogoMark />  — icon only, TopNav right corner
+ *
+ * IMPORTANT: use relative require() paths — Metro does not honour
+ * TypeScript path aliases (@/assets/*) for asset resolution.
+ * These paths are relative to THIS file: src/components/Logo.tsx
+ *       ../../assets/  →  frontend/assets/
  */
 import { Image, StyleSheet, View } from "react-native";
 
-// Metro resolves static require() at bundle time so the paths must be literals.
-const LOGO_WITH_NAME = require("@/assets/logo_with_name.png");
-const LOGO_ICON      = require("@/assets/logo.png");
+const LOGO_WITH_NAME = require("../../assets/logo_with_name.png");
+const LOGO_ICON      = require("../../assets/logo.png");
 
 type LogoProps = {
-  /** Height of the full wordmark image. Width scales proportionally. Default: 32 */
+  /** Height of the rendered wordmark. Width is derived from the image's natural aspect ratio. */
   height?: number;
 };
 
 type LogoMarkProps = {
-  /** Height (and width) of the icon-only image. Default: 32 */
+  /** Square size of the icon-only mark. */
   size?: number;
 };
 
 /**
- * Full wordmark — icon + "CareLoop" text side by side.
- * Use on splash / auth / onboarding screens.
+ * Full wordmark — icon + "CareLoop" name.
+ * Renders at the requested height; width stretches to fill the container
+ * so the image is never clipped regardless of the natural aspect ratio.
  */
 export function Logo({ height = 32 }: LogoProps) {
-  // logo_with_name.png is wider than tall; preserve aspect ratio via undefined width
   return (
-    <View style={styles.logoWrap}>
+    <View style={[styles.logoWrap, { height }]}>
       <Image
         source={LOGO_WITH_NAME}
-        style={{ height, width: undefined, aspectRatio: undefined }}
+        style={styles.logoImage}
         resizeMode="contain"
         accessibilityLabel="CareLoop"
       />
@@ -39,7 +43,7 @@ export function Logo({ height = 32 }: LogoProps) {
 }
 
 /**
- * Icon-only mark — used in nav bars where horizontal space is limited.
+ * Square icon mark — used in TopNav when a hamburger is also visible.
  */
 export function LogoMark({ size = 32 }: LogoMarkProps) {
   return (
@@ -54,7 +58,15 @@ export function LogoMark({ size = 32 }: LogoMarkProps) {
 
 const styles = StyleSheet.create({
   logoWrap: {
-    // Prevents the image from stretching inside flex rows
-    alignSelf: "flex-start",
+    // Let the image fill the container naturally; container height is set inline.
+    justifyContent: "center",
+    alignSelf: "center",
+    // Give the wrapper enough width to show the whole wordmark.
+    // 3:1 is a conservative aspect ratio that works for typical wordmarks.
+    aspectRatio: 3,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
   },
 });

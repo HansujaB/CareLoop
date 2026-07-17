@@ -52,9 +52,9 @@ export default function EmergencyCardEditorScreen() {
 
   // Load current card on mount
   useEffect(() => {
-    if (!profileId) return;
+    if (!profileId || !firebaseUser) return;
     api
-      .getEmergency(profileId)
+      .getEmergency(profileId, firebaseUser.uid)
       .then((res) => {
         setText(res.content ?? "");
         setPageState("editing");

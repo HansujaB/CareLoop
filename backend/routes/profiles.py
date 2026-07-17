@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 
+from deps.profile_auth import require_owned_profile
 from models.schemas import CreateProfileRequest, ProfileResponse
 from services import firebase
 from services.firebase import FirestoreError
@@ -12,6 +13,8 @@ async def create_profile(
     body: CreateProfileRequest,
     x_firebase_uid: str | None = Header(default=None),
 ) -> ProfileResponse:
+    if not x_firebase_uid:
+        raise HTTPException(status_code=401, detail="X-Firebase-UID header required.")
     try:
         profile = await firebase.create_profile(name=body.name, admin_uid=x_firebase_uid)
     except FirestoreError as exc:
@@ -33,8 +36,8 @@ async def get_my_profile(
 
 
 @router.get("/{profile_id}", response_model=ProfileResponse)
-async def get_profile(profile_id: str) -> ProfileResponse:
-    profile = await firebase.get_profile(profile_id)
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found.")
+async def get_profile(
+    profile_id: str,
+    profile: dict = Depends(require_owned_profile),
+) -> ProfileResponse:
     return ProfileResponse(profile_id=profile["profile_id"], name=profile["name"])

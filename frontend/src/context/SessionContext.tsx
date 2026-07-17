@@ -77,39 +77,52 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         setRole("admin");
       } else if (role === "admin") {
+        // User signed out — wipe everything including the persisted profile
         setRole("none");
         setProfileId(null);
         setProfileName("");
+        _clearProfile();
       }
       setAuthLoading(false);
     });
     return unsubscribe;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 3. UID-based recovery: if auth resolved + storage loaded + still no profile,
-  //    try fetching the existing profile from the backend by Firebase UID.
-  //    This handles app reinstalls or AsyncStorage wipes without losing data.
-  //    `profileRecovering` stays true for the duration so routing gates can wait.
+  // 3. UID-based recovery: whenever a Firebase user is present and auth/storage
+  //    have both finished loading, check whether the cached profileId actually
+  //    belongs to this user.  If it doesn't (different account on same device),
+  //    wipe the stale cache and recover the correct profile from the backend.
   useEffect(() => {
     if (!firebaseUser || authLoading || profileLoading) return;
-    if (profileId) {
-      // Already have a profile — nothing to recover
-      setProfileRecovering(false);
-      return;
-    }
-    // Mark recovery as in-flight so the admin home gate doesn't redirect prematurely
+
     setProfileRecovering(true);
     api.getProfileByUid(firebaseUser.uid)
       .then((profile) => {
         if (profile?.profile_id) {
-          setProfileId(profile.profile_id);
-          setProfileName(profile.name);
-          _persistProfile(profile.profile_id, profile.name);
+          // Only update if the recovered profile differs from what's in state
+          // (avoids a redundant re-render on normal app restarts)
+          if (profile.profile_id !== profileId) {
+            setProfileId(profile.profile_id);
+            setProfileName(profile.name);
+            _persistProfile(profile.profile_id, profile.name);
+          }
+        } else {
+          // No profile found for this UID — clear any stale cached profile
+          // so the user is routed to create-profile
+          if (profileId) {
+            setProfileId(null);
+            setProfileName("");
+            _clearProfile();
+          }
         }
       })
-      .catch(() => { /* no profile found — user will go to create-profile */ })
+      .catch(() => {
+        // Network error — keep whatever is in state; user can retry
+      })
       .finally(() => setProfileRecovering(false));
-  }, [firebaseUser, authLoading, profileLoading, profileId]);
+  // Re-run whenever the logged-in user changes — this is the key fix:
+  // switching accounts re-runs the check and replaces the stale profileId.
+  }, [firebaseUser, authLoading, profileLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = useMemo<SessionState>(
     () => ({
@@ -133,14 +146,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setCaregiverName,
       completeOnboarding: () => setHasOnboarded(true),
       resetSession: async () => {
-        await signOut();
-        setRole("none");
+        // Clear in-memory state first so nothing stale is visible during sign-out
         setProfileId(null);
         setProfileName("");
         setCaregiverToken(null);
         setCaregiverName(null);
+        setRole("none");
         setProfileRecovering(false);
         await _clearProfile();
+        await signOut();
       },
     }),
     [role, firebaseUser, authLoading, profileId, profileName, profileLoading, profileRecovering, caregiverToken, caregiverName, hasOnboarded],
