@@ -6,6 +6,8 @@ from models.schemas import (
     ChatResponse,
     EmergencyCardResponse,
     HandoverResponse,
+    MedicalHistoryResponse,
+    MedicalReportResponse,
 )
 from services import care_memory, firebase
 from services.mem0 import Mem0Error
@@ -94,3 +96,29 @@ async def caregiver_emergency(
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Could not load emergency card.") from exc
     return EmergencyCardResponse(content=content or "")
+
+
+@router.get("/medical-history", response_model=MedicalHistoryResponse)
+async def caregiver_medical_history(
+    request: Request,
+    x_caregiver_token: str | None = Header(default=None),
+) -> MedicalHistoryResponse:
+    profile_id = await _profile_from_token(x_caregiver_token, _get_client_ip(request))
+    try:
+        content = await firebase.get_medical_history_card(profile_id)
+    except FirestoreError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return MedicalHistoryResponse(content=content or "")
+
+
+@router.get("/medical-reports", response_model=list[MedicalReportResponse])
+async def caregiver_medical_reports(
+    request: Request,
+    x_caregiver_token: str | None = Header(default=None),
+) -> list[MedicalReportResponse]:
+    profile_id = await _profile_from_token(x_caregiver_token, _get_client_ip(request))
+    try:
+        reports = await firebase.list_medical_reports(profile_id)
+    except FirestoreError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return [MedicalReportResponse(**r) for r in reports]

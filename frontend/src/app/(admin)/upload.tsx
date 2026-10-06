@@ -1,13 +1,13 @@
 /**
  * Medical record upload screen (admin / parent only).
  *
- * Flow:
+ * Flow (Issue #4):
  *   1. Parent taps "Choose file" → expo-document-picker opens Files app
  *   2. File is validated client-side (type + size)
  *   3. XHR multipart POST to /profiles/{id}/upload
- *   4. Backend runs OCR (PDF → pypdf, image → Groq vision) then Groq cleanup
- *      and saves the extracted text to Mem0 care memory
- *   5. UI shows success (char count) or a clear error message
+ *   4. Backend runs OCR and stores the extracted text AS-IS under
+ *      Medical history — it is NOT added to AI memory
+ *   5. UI shows success (report saved) or a clear error message
  *
  * Supported: PDF, JPEG, PNG, WebP, HEIC — up to 20 MB (enforced on backend too)
  */
@@ -125,7 +125,7 @@ export default function UploadScreen() {
           <Text style={styles.title}>Upload a document</Text>
           <Text style={styles.subtitle}>
             PDF or image (JPEG, PNG, WebP, HEIC) — up to 20 MB.{"\n"}
-            Text is extracted via OCR and saved to care memory.
+            Text is extracted and saved as-is under Medical history (not added to AI memory).
           </Text>
 
           {state.status === "error" && (
@@ -180,7 +180,7 @@ export default function UploadScreen() {
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.statusTitle}>Processing…</Text>
           <Text style={styles.statusSub}>
-            Running OCR and saving to care memory. This can take up to 30 seconds for images.
+            Running OCR and saving the report as-is. This can take up to 30 seconds for images.
           </Text>
         </Card>
       )}
@@ -191,7 +191,7 @@ export default function UploadScreen() {
           <View style={styles.successIconWrap}>
             <Ionicons name="checkmark-circle-outline" size={36} color={colors.success} />
           </View>
-          <Text style={styles.successTitle}>Saved to care memory</Text>
+          <Text style={styles.successTitle}>Report saved as-is</Text>
           <Text style={styles.successSub}>{state.message}</Text>
           <SecondaryButton
             label="Upload another"

@@ -12,6 +12,7 @@ export default function AdminLayout() {
       <Stack.Screen name="chat" />
       <Stack.Screen name="emergency" />
       <Stack.Screen name="upload" />
+      <Stack.Screen name="medical-history" />
     </Stack>
   );
 }

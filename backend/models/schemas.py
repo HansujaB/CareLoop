@@ -56,5 +56,22 @@ class SetEmergencyCardRequest(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
 
 
+class MedicalHistoryResponse(BaseModel):
+    content: str
+
+
+class SetMedicalHistoryRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class MedicalReportResponse(BaseModel):
+    report_id: str
+    filename: str
+    content_type: str = ""
+    extracted_text: str
+    ocr_chars: int = 0
+    created_at: str | None = None
+
+
 class ErrorResponse(BaseModel):
     detail: str

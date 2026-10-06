@@ -5,10 +5,11 @@ Strategy:
   PDF  → pypdf (pure-Python, no system dependencies)
   Image → Groq's vision-capable model via base64 inline image
 
-After extraction, raw OCR text is cleaned by Groq (fixes garbled characters,
-normalises formatting) before being handed to Mem0.  If OCR fails, the
-original file is still saved; the error is surfaced to the caller so the
-upload record can be flagged for manual review.
+Extracted text is returned RAW and stored as-is in Firestore medical
+reports (Issue #4). It is NEVER fed to Mem0 — report extracts and care
+memories live in separate stores so medical jargon can't pollute the
+shift handover summary. If OCR fails, the error is surfaced to the caller
+so the UI can show a retry state.
 """
 
 from __future__ import annotations
@@ -116,41 +117,18 @@ async def _image_to_text(data: bytes, content_type: str) -> str:
         raise OCRError("Could not reach OCR service.") from exc
 
 
-async def _clean_with_groq(raw_text: str) -> str:
-    """
-    Clean OCR output with Groq LLM:
-    - Fix garbled characters / ligature artifacts
-    - Normalise line breaks
-    - Preserve all medical facts verbatim
-    """
-    from services.groq import phrase_response
-
-    system = (
-        "You are a medical document formatter. The text below was extracted from a scanned document. "
-        "Fix any OCR errors (garbled characters, broken words, misread numbers), "
-        "normalise whitespace and line breaks, and preserve ALL medical information exactly. "
-        "Do not remove, summarise, or rewrite any clinical facts. "
-        "Output only the cleaned text — no commentary, no preamble."
-    )
-    return await phrase_response(
-        system_prompt=system,
-        user_prompt=raw_text,
-        max_tokens=2048,
-    )
-
-
 class OCRError(Exception):
     pass
 
 
-async def extract_and_clean(
+async def extract_raw(
     file_bytes: bytes,
     content_type: str,
     filename: str,
 ) -> str:
     """
-    Main entry point: extract text from file then clean with Groq.
-    Returns cleaned text ready to be passed to Mem0.
+    Extract text from file WITHOUT any LLM cleanup or rewriting.
+    Returns the raw extracted text as-is, ready to be stored verbatim.
     Raises OCRError on failure.
     """
     kind = _detect_kind(content_type, filename)
@@ -161,7 +139,5 @@ async def extract_and_clean(
     else:
         raw = await _image_to_text(file_bytes, content_type)
 
-    logger.info("OCR: raw text extracted (%d chars), cleaning with Groq…", len(raw))
-    cleaned = await _clean_with_groq(raw)
-    logger.info("OCR: cleaned text ready (%d chars)", len(cleaned))
-    return cleaned
+    logger.info("OCR: raw text extracted (%d chars), stored as-is", len(raw))
+    return raw

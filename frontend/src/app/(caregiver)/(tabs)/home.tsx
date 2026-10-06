@@ -72,6 +72,13 @@ export default function CaregiverHomeScreen() {
           accent={colors.danger}
         />
         <ActionTile
+          icon="folder-open-outline"
+          title="Medical history"
+          subtitle="Reports saved as-is + appointments"
+          onPress={() => router.push("/(caregiver)/(tabs)/medical")}
+          accent={colors.primary}
+        />
+        <ActionTile
           icon="person-outline"
           title="My profile"
           subtitle="Your shift info and token"

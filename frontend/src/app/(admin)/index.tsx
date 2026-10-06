@@ -91,6 +91,12 @@ export default function AdminHomeScreen() {
         subtitle="Allergies, meds, contacts"
         onPress={() => router.push("/(admin)/emergency")}
       />
+      <ActionTile
+        icon="folder-open-outline"
+        title="Medical history"
+        subtitle="Reports saved as-is + appointments"
+        onPress={() => router.push("/(admin)/medical-history")}
+      />
     </Screen>
   );
 }

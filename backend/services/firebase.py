@@ -224,3 +224,96 @@ async def set_emergency_card(profile_id: str, content: str) -> None:
     db.collection(PROFILES).document(profile_id).update({
         "emergency_card": content.strip(),
     })
+
+
+# ── Medical reports (Issue #4: stored as-is, never fed to Mem0) ─────────────
+
+REPORTS_SUBCOLLECTION = "medical_reports"
+
+
+async def save_medical_report(
+    profile_id: str,
+    *,
+    filename: str,
+    content_type: str,
+    extracted_text: str,
+) -> dict[str, Any]:
+    """Store an OCR-extracted report verbatim under the profile. Returns the record."""
+    db = _db()
+    doc_ref = (
+        db.collection(PROFILES)
+        .document(profile_id)
+        .collection(REPORTS_SUBCOLLECTION)
+        .document()
+    )
+    payload = {
+        "filename": filename,
+        "content_type": content_type,
+        "extracted_text": extracted_text,
+        "ocr_chars": len(extracted_text),
+        "created_at": _utcnow(),
+    }
+    doc_ref.set(payload)
+    return {"report_id": doc_ref.id, **payload}
+
+
+def _serialize_report(report_id: str, data: dict[str, Any]) -> dict[str, Any]:
+    created = data.get("created_at")
+    if hasattr(created, "isoformat"):
+        try:
+            created = created.isoformat()
+        except Exception:
+            created = str(created)
+    return {
+        "report_id": report_id,
+        "filename": data.get("filename", "report"),
+        "content_type": data.get("content_type", ""),
+        "extracted_text": data.get("extracted_text", ""),
+        "ocr_chars": data.get("ocr_chars", 0),
+        "created_at": created,
+    }
+
+
+async def list_medical_reports(profile_id: str, limit: int = 20) -> list[dict[str, Any]]:
+    db = _db()
+    query = (
+        db.collection(PROFILES)
+        .document(profile_id)
+        .collection(REPORTS_SUBCOLLECTION)
+        .order_by("created_at", direction=firestore.Query.DESCENDING)
+        .limit(limit)
+    )
+    reports: list[dict[str, Any]] = []
+    for snap in query.stream():
+        reports.append(_serialize_report(snap.id, snap.to_dict() or {}))
+    return reports
+
+
+async def get_medical_report(profile_id: str, report_id: str) -> dict[str, Any] | None:
+    db = _db()
+    snap = (
+        db.collection(PROFILES)
+        .document(profile_id)
+        .collection(REPORTS_SUBCOLLECTION)
+        .document(report_id)
+        .get()
+    )
+    if not snap.exists:
+        return None
+    return _serialize_report(snap.id, snap.to_dict() or {})
+
+
+async def get_medical_history_card(profile_id: str) -> str | None:
+    """Return the parent-authored medical history card text, or None if not set."""
+    db = _db()
+    snap = db.collection(PROFILES).document(profile_id).get()
+    data = snap.to_dict() or {}
+    return data.get("medical_history_card") or None
+
+
+async def set_medical_history_card(profile_id: str, content: str) -> None:
+    """Persist the parent-authored medical history card text."""
+    db = _db()
+    db.collection(PROFILES).document(profile_id).update({
+        "medical_history_card": content.strip(),
+    })

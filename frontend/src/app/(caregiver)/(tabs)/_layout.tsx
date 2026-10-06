@@ -7,6 +7,7 @@ export default function CaregiverTabsLayout() {
       <Stack.Screen name="handover" />
       <Stack.Screen name="chat" />
       <Stack.Screen name="emergency" />
+      <Stack.Screen name="medical" />
       <Stack.Screen name="profile" />
     </Stack>
   );

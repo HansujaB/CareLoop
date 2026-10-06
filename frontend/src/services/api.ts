@@ -92,6 +92,15 @@ export type CaregiverLink = {
   locked_ip: string | null;
 };
 
+export type MedicalReport = {
+  report_id: string;
+  filename: string;
+  content_type: string;
+  extracted_text: string;
+  ocr_chars: number;
+  created_at: string | null;
+};
+
 export const api = {
   createProfile: (name: string, uid: string) =>
     request<{ profile_id: string; name: string }>("/profiles", {
@@ -171,7 +180,8 @@ export const api = {
   /**
    * Upload a PDF or image file as a medical record.
    * Uses XHR (not fetch) so React Native / Hermes can attach the file part.
-   * The backend runs OCR, cleans the text with Groq, and saves it to Mem0.
+   * The backend runs OCR and stores the extracted text AS-IS under
+   * Medical history — it is NOT added to AI memory (Issue #4).
    */
   uploadMedicalRecord: (
     profileId: string,
@@ -182,18 +192,18 @@ export const api = {
   ) => {
     const xhr = new XMLHttpRequest();
     const url = `${BASE_URL}/profiles/${profileId}/upload`;
-    return new Promise<{ ok: boolean; message: string; ocr_chars: number }>(
+    return new Promise<{ ok: boolean; message: string; report_id: string; filename: string; ocr_chars: number }>(
       (resolve, reject) => {
         xhr.open("POST", url);
         xhr.setRequestHeader("X-Firebase-UID", uid);
         xhr.responseType = "text";
-        xhr.timeout = 120_000; // OCR + Groq can take a while
+        xhr.timeout = 120_000; // OCR can take a while for images
 
         xhr.onload = () => {
           try {
             const payload = JSON.parse(xhr.responseText) as Record<string, unknown>;
             if (xhr.status >= 200 && xhr.status < 300) {
-              resolve(payload as { ok: boolean; message: string; ocr_chars: number });
+              resolve(payload as { ok: boolean; message: string; report_id: string; filename: string; ocr_chars: number });
             } else {
               const detail =
                 typeof payload.detail === "string" ? payload.detail : "Upload failed";
@@ -218,4 +228,29 @@ export const api = {
       },
     );
   },
+
+  getMedicalHistory: (profileId: string, uid: string) =>
+    request<{ content: string }>(`/profiles/${profileId}/medical-history`, { uid }),
+
+  setMedicalHistory: (profileId: string, uid: string, content: string) =>
+    request<{ content: string }>(`/profiles/${profileId}/medical-history`, {
+      method: "PUT",
+      body: { content },
+      uid,
+    }),
+
+  listMedicalReports: (profileId: string, uid: string) =>
+    request<MedicalReport[]>(`/profiles/${profileId}/medical-reports`, { uid }),
+
+  draftMedicalHistory: (profileId: string, uid: string) =>
+    request<{ content: string }>(`/profiles/${profileId}/medical-history/draft`, {
+      method: "POST",
+      uid,
+    }),
+
+  caregiverMedicalHistory: (token: string) =>
+    request<{ content: string }>("/caregiver/medical-history", { token }),
+
+  caregiverMedicalReports: (token: string) =>
+    request<MedicalReport[]>("/caregiver/medical-reports", { token }),
 };

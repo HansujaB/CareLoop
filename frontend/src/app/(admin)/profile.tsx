@@ -29,8 +29,14 @@ export default function AdminProfileScreen() {
       <ActionTile
         icon="cloud-upload-outline"
         title="Upload medical record"
-        subtitle="PDF or image → OCR → Care memory"
+        subtitle="PDF or image → saved as-is"
         onPress={() => router.push("/(admin)/upload")}
+      />
+      <ActionTile
+        icon="folder-open-outline"
+        title="Medical history"
+        subtitle="Reports + routine appointments"
+        onPress={() => router.push("/(admin)/medical-history")}
       />
       <ActionTile
         icon="document-text-outline"

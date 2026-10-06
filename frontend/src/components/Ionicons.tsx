@@ -34,6 +34,7 @@ export const glyphMap = {
   "document-outline": true,
   "document-text-outline": true,
   "cloud-upload-outline": true,
+  "folder-open-outline": true,
 
   "home-outline": true,
   "link-outline": true,

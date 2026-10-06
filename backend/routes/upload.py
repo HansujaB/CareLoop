@@ -1,15 +1,15 @@
 """
-Upload route — accepts a PDF or image file, runs OCR + Groq cleanup,
-then saves the extracted text to Mem0 care memory.
+Upload route — accepts a PDF or image file, runs OCR, and stores the
+extracted text AS-IS in Firestore under the profile's medical reports.
 
-The original file is NOT stored to Firebase Storage (out of scope for the
-demo — Storage SDK adds setup overhead).  What IS stored:
-  - The extracted (cleaned) text in Mem0 under the profile's user_id
-  - A Firestore record on the profile doc: { uploads: [...] } (last 20)
-    so the parent can see upload history and status.
+Issue #4: OCR output is NEVER fed to Mem0 care memory. Reports are saved
+verbatim so the parent can review them, and caregivers can read them via
+the medical history endpoints. A separate parent-authored "medical history
+card" (see routes/care.py) holds the curated summary + routine appointments.
 
-If OCR fails the upload is still acknowledged \u2014 the error is logged
-and returned so the UI can surface a "processing failed" state.
+The original binary is not persisted (no Storage SDK in the demo) — the
+extracted text is the stored record. If OCR fails the upload is rejected
+with 422 so the UI can surface a retry state.
 """
 from __future__ import annotations
 
@@ -19,10 +19,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from deps.profile_auth import require_owned_profile
-from services import care_memory
+from services import firebase
 from services import ocr as ocr_service
+from services.firebase import FirestoreError
 from services.ocr import OCRError
-from services.mem0 import Mem0Error
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,8 @@ MAX_BYTES = 20 * 1024 * 1024  # 20 MB
 class UploadResponse(BaseModel):
     ok: bool
     message: str
+    report_id: str = ""
+    filename: str = ""
     ocr_chars: int = 0
 
 
@@ -69,9 +71,9 @@ async def upload_medical_record(
             detail=f"File too large ({len(file_bytes) // 1024 // 1024} MB). Maximum is 20 MB.",
         )
 
-    # ── OCR ─────────────────────────────────────────────────────────────────
+    # ── OCR (raw, stored as-is — never sent to Mem0) ────────────────────────
     try:
-        cleaned_text = await ocr_service.extract_and_clean(file_bytes, content_type, filename)
+        raw_text = await ocr_service.extract_raw(file_bytes, content_type, filename)
     except OCRError as exc:
         logger.error("OCR failed for profile %s / file %s: %s", profile_id, filename, exc)
         raise HTTPException(
@@ -79,17 +81,27 @@ async def upload_medical_record(
             detail=f"Could not extract text from document: {exc}",
         ) from exc
 
-    # ── Save to care memory ─────────────────────────────────────────────────
+    if not raw_text.strip():
+        raise HTTPException(status_code=422, detail="Document contained no readable text.")
+
+    # ── Save verbatim to Firestore ──────────────────────────────────────────
     try:
-        await care_memory.remember_for_profile(
+        record = await firebase.save_medical_report(
             profile_id,
-            f"[Medical record: {filename}]\n{cleaned_text}",
+            filename=filename,
+            content_type=content_type,
+            extracted_text=raw_text,
         )
-    except Mem0Error as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except FirestoreError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return UploadResponse(
         ok=True,
-        message=f"Document processed and saved to care memory ({len(cleaned_text)} characters extracted).",
-        ocr_chars=len(cleaned_text),
+        message=(
+            f"Report saved as-is ({len(raw_text)} characters). "
+            "It is stored under Medical history and is not added to AI memory."
+        ),
+        report_id=record["report_id"],
+        filename=filename,
+        ocr_chars=len(raw_text),
     )

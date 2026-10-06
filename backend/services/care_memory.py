@@ -11,12 +11,20 @@ HANDOVER_QUERY = (
     "recent updates or incidents."
 )
 
-
 HANDOVER_SYSTEM = (
-    "You write shift handover briefings for caregivers. Use only the provided context. "
+    "You write shift handover briefings for caregivers. Use ONLY facts and instructions "
+    "explicitly stated in the provided context. Do not infer, imply, suggest, or add any "
+    "action, treatment, medication, or instruction that is not written verbatim in the "
+    "context — even if it seems medically reasonable or commonly associated with a "
+    "condition mentioned. For example, if the context mentions a diagnosis or condition "
+    "(e.g. 'has bronchitis', 'has asthma') but does not explicitly state an instruction "
+    "tied to it (e.g. 'give inhaler if wheezing'), you must NOT mention or imply that "
+    "instruction. Mentioning a condition is not permission to state what should be done "
+    "about it unless the context says so directly. "
     "Write one coherent paragraph in a warm, spoken tone — like a parent quickly "
-    "briefing a babysitter. Do not use bullet points or headers. If something is "
-    "missing from context, omit it rather than guessing."
+    "briefing a babysitter. Do not use bullet points or headers. "
+    "If something is missing from context, omit it rather than guessing or filling gaps "
+    "with general knowledge. When unsure whether something is explicitly stated, leave it out."
 )
 
 CHAT_SYSTEM = (
@@ -73,3 +81,47 @@ async def get_emergency_card(profile_id: str) -> str | None:
 async def set_emergency_card(profile_id: str, content: str) -> None:
     """Save the parent-authored emergency card to Firestore."""
     await firebase.set_emergency_card(profile_id, content)
+
+
+MEDICAL_DRAFT_SYSTEM = (
+    "You turn raw medical report extracts into a short parent-editable history card. "
+    "Use ONLY facts explicitly stated in the reports — conditions, medications with dose/timing, "
+    "allergies, and routine or follow-up appointments with dates. Do not infer, diagnose, or add "
+    "advice. If an appointment date is stated, keep it verbatim. If something is missing, omit it. "
+    "Output plain text only, no markdown, in this shape:\n"
+    "Conditions: ...\n\nMedications: ...\n\nRoutine appointments:\n- ...\n\n"
+    "Keep it under 250 words so a parent can quickly review and edit it."
+)
+
+
+async def draft_medical_history(profile_id: str) -> str:
+    """
+    Draft the medical history card from stored report extracts (Firestore only,
+    never Mem0). Saves the draft to Firestore so the parent can edit it after.
+    Raises ValueError if there are no reports, GroqError/FirestoreError otherwise.
+    """
+    reports = await firebase.list_medical_reports(profile_id, limit=10)
+    chunks: list[str] = []
+    total = 0
+    for r in reports:
+        text = (r.get("extracted_text") or "").strip()
+        if not text:
+            continue
+        snippet = text[:1500]
+        if total + len(snippet) > 12000:
+            snippet = snippet[: max(0, 12000 - total)]
+        chunks.append(f"[{r.get('filename', 'report')}]\n{snippet}")
+        total += len(snippet)
+        if total >= 12000:
+            break
+    if not chunks:
+        raise ValueError("No uploaded reports to draft from yet.")
+
+    draft = await groq.phrase_response(
+        system_prompt=MEDICAL_DRAFT_SYSTEM,
+        user_prompt="Reports:\n\n" + "\n\n---\n\n".join(chunks),
+        max_tokens=800,
+    )
+    draft = draft.strip()[:4000]
+    await firebase.set_medical_history_card(profile_id, draft)
+    return draft

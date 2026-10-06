@@ -37,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Shift handover", icon: "document-text-outline", route: "/(caregiver)/(tabs)/handover" },
   { label: "Ask assistant", icon: "chatbubble-outline", route: "/(caregiver)/(tabs)/chat" },
   { label: "Emergency card", icon: "medkit-outline", route: "/(caregiver)/(tabs)/emergency" },
+  { label: "Medical history", icon: "folder-open-outline", route: "/(caregiver)/(tabs)/medical" },
   { label: "My profile", icon: "person-outline", route: "/(caregiver)/(tabs)/profile" },
 ];
 

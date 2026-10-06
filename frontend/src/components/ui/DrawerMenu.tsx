@@ -36,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Shift handover", icon: "document-text-outline", route: "/(admin)/handover" },
   { label: "Emergency card", icon: "medkit-outline", route: "/(admin)/emergency" },
   { label: "Upload records", icon: "cloud-upload-outline", route: "/(admin)/upload" },
+  { label: "Medical history", icon: "folder-open-outline", route: "/(admin)/medical-history" },
   { label: "Profile", icon: "person-outline", route: "/(admin)/profile" },
 ];
 
