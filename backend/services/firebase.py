@@ -68,18 +68,17 @@ async def get_profile(profile_id: str) -> dict[str, Any] | None:
     return {"profile_id": snap.id, **data}
 
 
-async def get_profile_by_uid(uid: str) -> dict[str, Any] | None:
-    """Look up the first active profile owned by this Firebase UID."""
+async def get_profiles_by_uid(uid: str) -> list[dict[str, Any]]:
+    """List ALL profiles owned by this Firebase UID, oldest first."""
     if not uid:
-        return None
+        return []
     db = _db()
-    query = db.collection(PROFILES).where("admin_uid", "==", uid).limit(1)
-    matches = list(query.stream())
-    if not matches:
-        return None
-    snap = matches[0]
-    data = snap.to_dict() or {}
-    return {"profile_id": snap.id, **data}
+    query = db.collection(PROFILES).where("admin_uid", "==", uid)
+    profiles = [
+        {"profile_id": snap.id, **(snap.to_dict() or {})} for snap in query.stream()
+    ]
+    profiles.sort(key=lambda p: str(p.get("created_at", "")))
+    return profiles
 
 
 async def assign_admin_uid(profile_id: str, uid: str) -> None:

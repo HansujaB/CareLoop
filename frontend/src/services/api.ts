@@ -110,7 +110,7 @@ export const api = {
     }),
 
   getProfileByUid: (uid: string) =>
-    request<{ profile_id: string; name: string } | null>("/profiles/mine", {
+    request<{ profile_id: string; name: string }[]>("/profiles/mine", {
       uid,
     }),
 
