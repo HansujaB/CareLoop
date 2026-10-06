@@ -27,7 +27,7 @@ CareLoop lets parents build a living, searchable knowledge base about their chil
 | Shift handover | Auto-generated briefing from everything stored in the profile, regenerated only when memory changes. |
 | Emergency card | Parent-authored card — allergies, medications, emergency contacts — shown to caregivers exactly as written. |
 | Link-based caregiver access | Share access via a one-tap token link. No caregiver account or password needed. |
-| IP-locked sessions | A caregiver token is bound to the first device that uses it. A second device is rejected until the parent generates a new link. |
+| Device-locked sessions | A caregiver token is bound to the first device that uses it (stable across WiFi changes). A second device is rejected until the care admin generates a new link. |
 | Revocable access | Instantly cut off a caregiver's access from the parent dashboard. |
 | Voice input | Record care updates; Groq Whisper transcribes and saves them to memory. |
 | Medical record upload | PDF or image upload — OCR extracts text, Groq cleans it, Mem0 stores it. |
@@ -49,7 +49,7 @@ FastAPI Backend
   routes/voice.py       — POST /transcribe (audio -> Whisper -> memory)
   routes/care.py        — GET /handover, GET+PUT /emergency, POST /chat
   routes/links.py       — caregiver link CRUD
-  routes/caregiver.py   — caregiver-facing endpoints (token auth + IP lock)
+  routes/caregiver.py   — caregiver-facing endpoints (token auth + device lock)
   routes/upload.py      — file upload -> OCR -> memory
        |
        +-- services/mem0.py      ->  Mem0 Cloud   (care memory storage + search)
@@ -212,7 +212,7 @@ careloop/
 ## Security
 
 - Caregiver tokens are validated server-side on every request. Revoked tokens fail immediately.
-- A token is bound to the first IP address that uses it. Any subsequent request from a different IP is rejected with a clear error message.
+- A token is bound to the first device that uses it (stable device ID, unaffected by WiFi/network changes). Any request from a different device is rejected with a clear error message.
 - Admin authentication uses Firebase Authentication. Caregivers do not have accounts.
 - API keys and the Firebase service account file are excluded from version control via `.gitignore`.
 

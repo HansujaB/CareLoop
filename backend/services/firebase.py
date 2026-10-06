@@ -141,7 +141,7 @@ async def revoke_caregiver_link(profile_id: str, link_id: str) -> None:
     doc_ref.update({"status": "revoked", "revoked_at": _utcnow()})
 
 
-async def validate_caregiver_token(token: str, client_ip: str | None = None) -> dict[str, Any]:
+async def validate_caregiver_token(token: str, device_id: str | None = None) -> dict[str, Any]:
     db = _db()
     query = db.collection(LINKS).where("token", "==", token).limit(1)
     matches = list(query.stream())
@@ -153,11 +153,13 @@ async def validate_caregiver_token(token: str, client_ip: str | None = None) -> 
     if data.get("status") != "active":
         raise FirestoreError("Invalid or revoked caregiver link.")
 
-    # IP enforcement: once a device has locked this token, reject other IPs
-    locked_ip: str | None = data.get("locked_ip")
-    if locked_ip and client_ip and locked_ip != client_ip:
+    # Device enforcement: a token is bound to the first device that uses it
+    # (client-generated device ID, stable across WiFi/network changes).
+    # A different device is rejected until the admin generates a new link.
+    locked_device: str | None = data.get("locked_device_id")
+    if locked_device and device_id and locked_device != device_id:
         raise FirestoreError(
-            "This care link is already in use from another device. "
+            "This care link is already in use on another device. "
             "Ask your care admin to generate a new link."
         )
 
@@ -166,15 +168,15 @@ async def validate_caregiver_token(token: str, client_ip: str | None = None) -> 
     return {"link_id": snap.id, **data}
 
 
-async def set_caregiver_name(token: str, caregiver_name: str, client_ip: str | None = None) -> dict[str, Any]:
-    """Register the caregiver name and lock the token to the device IP (first use wins)."""
-    link = await validate_caregiver_token(token, client_ip)
+async def set_caregiver_name(token: str, caregiver_name: str, device_id: str | None = None) -> dict[str, Any]:
+    """Register the caregiver name and lock the token to the device (first use wins)."""
+    link = await validate_caregiver_token(token, device_id)
     db = _db()
     doc_ref = db.collection(LINKS).document(link["link_id"])
     updates: dict[str, Any] = {"caregiver_name": caregiver_name.strip()}
-    # Lock the IP on first login — subsequent logins from a different IP are blocked
-    if not link.get("locked_ip") and client_ip:
-        updates["locked_ip"] = client_ip
+    # Lock the device on first login — subsequent logins from a different device are blocked
+    if not link.get("locked_device_id") and device_id:
+        updates["locked_device_id"] = device_id
     doc_ref.update(updates)
     link["caregiver_name"] = caregiver_name.strip()
     return link

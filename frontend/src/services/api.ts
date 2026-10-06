@@ -1,4 +1,53 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+
+const DEVICE_ID_KEY = "caregiver_device_id";
+
+let _deviceId: string | null = null;
+let _deviceIdPromise: Promise<string> | null = null;
+
+function _newDeviceId(): string {
+  // RFC4122-style v4 UUID without extra deps (expo-crypto not installed).
+  // Collision odds are negligible for a per-install lock token.
+  const hex = () =>
+    Math.floor(Math.random() * 0xffffffff)
+      .toString(16)
+      .padStart(8, "0");
+  const h = hex() + hex() + hex() + hex();
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${h.slice(16, 20)}${h.slice(20, 32)}`;
+}
+
+/**
+ * Stable per-install device ID, sent as X-Device-Id on caregiver requests.
+ * Generated once, persisted in AsyncStorage — survives WiFi/network changes
+ * and app restarts. Reinstall = new ID = admin generates a new link.
+ */
+export async function getDeviceId(): Promise<string> {
+  if (_deviceId) return _deviceId;
+  if (!_deviceIdPromise) {
+    _deviceIdPromise = (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(DEVICE_ID_KEY);
+        if (stored) {
+          _deviceId = stored;
+          return stored;
+        }
+      } catch {
+        // Storage unavailable — fall through to an in-memory ID
+      }
+      const fresh = _newDeviceId();
+      _deviceId = fresh;
+      try {
+        await AsyncStorage.setItem(DEVICE_ID_KEY, fresh);
+      } catch {
+        // Non-fatal — in-memory ID still binds this session
+      }
+      return fresh;
+    })();
+  }
+  return _deviceIdPromise;
+}
 
 /**
  * Upload a file via XMLHttpRequest.
@@ -54,6 +103,7 @@ type RequestOptions = {
   body?: unknown;
   token?: string;   // X-Caregiver-Token
   uid?: string;     // X-Firebase-UID
+  deviceId?: string; // X-Device-Id (caregiver device lock)
   formData?: FormData;
 };
 
@@ -64,6 +114,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
   if (options.uid) {
     headers["X-Firebase-UID"] = options.uid;
+  }
+  if (options.deviceId) {
+    headers["X-Device-Id"] = options.deviceId;
   }
   if (options.body && !options.formData) {
     headers["Content-Type"] = "application/json";
@@ -89,7 +142,7 @@ export type CaregiverLink = {
   url: string;
   status: string;
   caregiver_name: string | null;
-  locked_ip: string | null;
+  locked_device_id: string | null;
 };
 
 export type MedicalReport = {
@@ -162,20 +215,31 @@ export const api = {
   revokeLink: (profileId: string, uid: string, linkId: string) =>
     request(`/profiles/${profileId}/links/${linkId}`, { method: "DELETE", uid }),
 
-  caregiverSession: (token: string, caregiverName: string) =>
+  caregiverSession: async (token: string, caregiverName: string) =>
     request("/caregiver/session", {
       body: { caregiver_name: caregiverName },
       token,
+      deviceId: await getDeviceId(),
     }),
 
-  caregiverHandover: (token: string) =>
-    request<{ summary: string }>("/caregiver/handover", { token }),
+  caregiverHandover: async (token: string) =>
+    request<{ summary: string }>("/caregiver/handover", {
+      token,
+      deviceId: await getDeviceId(),
+    }),
 
-  caregiverChat: (token: string, question: string) =>
-    request<{ answer: string }>("/caregiver/chat", { body: { question }, token }),
+  caregiverChat: async (token: string, question: string) =>
+    request<{ answer: string }>("/caregiver/chat", {
+      body: { question },
+      token,
+      deviceId: await getDeviceId(),
+    }),
 
-  caregiverEmergency: (token: string) =>
-    request<{ content: string }>("/caregiver/emergency", { token }),
+  caregiverEmergency: async (token: string) =>
+    request<{ content: string }>("/caregiver/emergency", {
+      token,
+      deviceId: await getDeviceId(),
+    }),
 
   /**
    * Upload a PDF or image file as a medical record.
@@ -248,9 +312,15 @@ export const api = {
       uid,
     }),
 
-  caregiverMedicalHistory: (token: string) =>
-    request<{ content: string }>("/caregiver/medical-history", { token }),
+  caregiverMedicalHistory: async (token: string) =>
+    request<{ content: string }>("/caregiver/medical-history", {
+      token,
+      deviceId: await getDeviceId(),
+    }),
 
-  caregiverMedicalReports: (token: string) =>
-    request<MedicalReport[]>("/caregiver/medical-reports", { token }),
+  caregiverMedicalReports: async (token: string) =>
+    request<MedicalReport[]>("/caregiver/medical-reports", {
+      token,
+      deviceId: await getDeviceId(),
+    }),
 };
