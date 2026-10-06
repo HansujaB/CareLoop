@@ -22,17 +22,17 @@ async def create_profile(
     return ProfileResponse(profile_id=profile["profile_id"], name=profile["name"])
 
 
-@router.get("/mine", response_model=ProfileResponse | None)
-async def get_my_profile(
+@router.get("/mine", response_model=list[ProfileResponse])
+async def get_my_profiles(
     x_firebase_uid: str | None = Header(default=None),
-) -> ProfileResponse | None:
-    """Return the existing profile for this Firebase UID, or null if none exists."""
+) -> list[ProfileResponse]:
+    """Return ALL profiles for this Firebase UID (oldest first), or [] if none exists."""
     if not x_firebase_uid:
         raise HTTPException(status_code=401, detail="X-Firebase-UID header required.")
-    profile = await firebase.get_profile_by_uid(x_firebase_uid)
-    if not profile:
-        return None
-    return ProfileResponse(profile_id=profile["profile_id"], name=profile["name"])
+    profiles = await firebase.get_profiles_by_uid(x_firebase_uid)
+    return [
+        ProfileResponse(profile_id=p["profile_id"], name=p["name"]) for p in profiles
+    ]
 
 
 @router.get("/{profile_id}", response_model=ProfileResponse)

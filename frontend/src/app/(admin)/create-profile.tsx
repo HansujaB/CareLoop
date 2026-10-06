@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { SecondaryButton } from "@/components/ui/SecondaryButton";
 import { Screen } from "@/components/ui/Screen";
 import { TextField } from "@/components/ui/TextField";
 import { useSession } from "@/context/SessionContext";
@@ -10,7 +11,7 @@ import { api } from "@/services/api";
 import { colors, spacing, typography } from "@/constants/theme";
 
 export default function CreateProfileScreen() {
-  const { setProfile, firebaseUser } = useSession();
+  const { setProfile, firebaseUser, profiles } = useSession();
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +22,9 @@ export default function CreateProfileScreen() {
     setError(null);
     try {
       const profile = await api.createProfile(name.trim(), firebaseUser?.uid ?? "");
+      // setProfile activates the new profile AND adds it to the switcher list
       setProfile(profile.profile_id, profile.name);
-      router.replace("/(admin)/memory");
+      router.replace("/(admin)");
     } catch (err: any) {
       setError(err.message ?? "Failed to create profile. Try again.");
     } finally {
@@ -33,7 +35,9 @@ export default function CreateProfileScreen() {
   return (
     <Screen showNav={false} scroll padded bottomInset={32}>
       <View style={styles.header}>
-        <Text style={styles.title}>Create care profile</Text>
+        <Text style={styles.title}>
+          {profiles.length > 0 ? "Add care profile" : "Create care profile"}
+        </Text>
         <Text style={styles.subtitle}>
           One profile per child or dependent. Their care knowledge lives here.
         </Text>
@@ -52,6 +56,13 @@ export default function CreateProfileScreen() {
             : <Ionicons name="heart-outline" size={18} color={colors.white} />
         }
       />
+      {profiles.length > 0 ? (
+        <SecondaryButton
+          label="Cancel"
+          onPress={() => router.back()}
+          icon={<Ionicons name="close-outline" size={18} color={colors.text} />}
+        />
+      ) : null}
     </Screen>
   );
 }

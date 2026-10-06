@@ -6,12 +6,18 @@ import { api } from "@/services/api";
 
 type Role = "none" | "admin" | "caregiver";
 
+export type CareProfile = {
+  profile_id: string;
+  name: string;
+};
+
 type SessionState = {
   role: Role;
   firebaseUser: User | null;
   authLoading: boolean;
   profileId: string | null;
   profileName: string;
+  profiles: CareProfile[];
   profileLoading: boolean;
   profileRecovering: boolean;  // true while Firestore UID lookup is in-flight
   caregiverToken: string | null;
@@ -19,6 +25,7 @@ type SessionState = {
   hasOnboarded: boolean;
   setRole: (role: Role) => void;
   setProfile: (profileId: string, name: string) => void;
+  switchProfile: (profileId: string) => void;
   setCaregiverToken: (token: string) => void;
   setCaregiverName: (name: string) => void;
   completeOnboarding: () => void;
@@ -51,13 +58,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role>("none");
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("");
+  const [profiles, setProfiles] = useState<CareProfile[]>([]);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileRecovering, setProfileRecovering] = useState(false);
   const [caregiverToken, setCaregiverToken] = useState<string | null>(null);
   const [caregiverName, setCaregiverName] = useState<string | null>(null);
   const [hasOnboarded, setHasOnboarded] = useState(false);
 
-  // 1. Restore profileId from AsyncStorage on mount (static import — works reliably)
+  // 1. Restore active profileId from AsyncStorage on mount (static import — works reliably)
   useEffect(() => {
     AsyncStorage.multiGet(["profileId", "profileName"])
       .then(([[, id], [, name]]) => {
@@ -81,6 +89,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setRole("none");
         setProfileId(null);
         setProfileName("");
+        setProfiles([]);
         _clearProfile();
       }
       setAuthLoading(false);
@@ -89,31 +98,32 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 3. UID-based recovery: whenever a Firebase user is present and auth/storage
-  //    have both finished loading, check whether the cached profileId actually
-  //    belongs to this user.  If it doesn't (different account on same device),
-  //    wipe the stale cache and recover the correct profile from the backend.
+  //    have both finished loading, fetch ALL profiles for this UID and reconcile
+  //    the cached active profileId: keep it if still owned, else fall back to
+  //    the first profile, else clear so the user is routed to create-profile.
   useEffect(() => {
     if (!firebaseUser || authLoading || profileLoading) return;
 
     setProfileRecovering(true);
     api.getProfileByUid(firebaseUser.uid)
-      .then((profile) => {
-        if (profile?.profile_id) {
-          // Only update if the recovered profile differs from what's in state
-          // (avoids a redundant re-render on normal app restarts)
-          if (profile.profile_id !== profileId) {
-            setProfileId(profile.profile_id);
-            setProfileName(profile.name);
-            _persistProfile(profile.profile_id, profile.name);
-          }
-        } else {
-          // No profile found for this UID — clear any stale cached profile
-          // so the user is routed to create-profile
-          if (profileId) {
-            setProfileId(null);
-            setProfileName("");
-            _clearProfile();
-          }
+      .then((list) => {
+        const owned = list ?? [];
+        setProfiles(owned);
+        const cached = owned.find((p) => p.profile_id === profileId);
+        if (cached) {
+          // Still owned — sync the name in case it changed elsewhere
+          setProfileName(cached.name);
+          _persistProfile(cached.profile_id, cached.name);
+        } else if (owned.length > 0) {
+          // Cached profile gone (or first login) — activate the first one
+          setProfileId(owned[0].profile_id);
+          setProfileName(owned[0].name);
+          _persistProfile(owned[0].profile_id, owned[0].name);
+        } else if (profileId) {
+          // No profiles at all — clear stale cache, route to create-profile
+          setProfileId(null);
+          setProfileName("");
+          _clearProfile();
         }
       })
       .catch(() => {
@@ -131,6 +141,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       authLoading,
       profileId,
       profileName,
+      profiles,
       profileLoading,
       profileRecovering,
       caregiverToken,
@@ -140,7 +151,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setProfile: (id, name) => {
         setProfileId(id);
         setProfileName(name);
+        setProfiles((prev) =>
+          prev.some((p) => p.profile_id === id)
+            ? prev.map((p) => (p.profile_id === id ? { ...p, name } : p))
+            : [...prev, { profile_id: id, name }],
+        );
         _persistProfile(id, name); // fire-and-forget — in-memory state updates immediately
+      },
+      switchProfile: (id) => {
+        const target = profiles.find((p) => p.profile_id === id);
+        if (!target) return;
+        setProfileId(target.profile_id);
+        setProfileName(target.name);
+        _persistProfile(target.profile_id, target.name);
       },
       setCaregiverToken,
       setCaregiverName,
@@ -149,6 +172,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // Clear in-memory state first so nothing stale is visible during sign-out
         setProfileId(null);
         setProfileName("");
+        setProfiles([]);
         setCaregiverToken(null);
         setCaregiverName(null);
         setRole("none");
@@ -157,7 +181,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         await signOut();
       },
     }),
-    [role, firebaseUser, authLoading, profileId, profileName, profileLoading, profileRecovering, caregiverToken, caregiverName, hasOnboarded],
+    [role, firebaseUser, authLoading, profileId, profileName, profiles, profileLoading, profileRecovering, caregiverToken, caregiverName, hasOnboarded],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
