@@ -114,7 +114,7 @@ npx expo start --clear
 | `MEM0_API_KEY` | Yes | Mem0 Cloud API key — [app.mem0.ai](https://app.mem0.ai) |
 | `GROQ_API_KEY` | Yes | Groq API key — [console.groq.com](https://console.groq.com) |
 | `FIREBASE_SERVICE_ACCOUNT_PATH` | Yes | Path to the Firebase service account JSON file |
-| `GROQ_LLM_MODEL` | No | LLM model for response phrasing. Default: `meta-llama/llama-4-scout-17b-16e-instruct` |
+| `GROQ_LLM_MODEL` | No | LLM model for response phrasing. Default: `openai/gpt-oss-20b` |
 | `GROQ_WHISPER_MODEL` | No | Whisper model for voice transcription. Default: `whisper-large-v3-turbo` |
 | `CAREGIVER_LINK_BASE_URL` | No | Deep link base for caregiver token URLs. Default: `careloop://c` |
 
@@ -156,7 +156,7 @@ npx expo start --clear
 | Navigation | Expo Router v4 (file-based) |
 | Backend | FastAPI + Uvicorn |
 | Care memory | Mem0 Cloud — semantic storage and search |
-| LLM phrasing | Groq — Llama 4 Scout |
+| LLM phrasing | Groq — openai/gpt-oss-20b |
 | Voice transcription | Groq — Whisper Large v3 Turbo |
 | Authentication | Firebase Authentication (admin users only) |
 | App state | Firestore (profiles, caregiver links, handover cache) |

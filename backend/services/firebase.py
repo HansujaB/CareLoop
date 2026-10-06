@@ -44,12 +44,15 @@ def _db():
     return firestore.client(database_id="careloop-db")
 
 
-async def create_profile(*, name: str, admin_uid: str | None = None) -> dict[str, Any]:
+async def create_profile(
+    *, name: str, admin_uid: str | None = None, relationship: str = ""
+) -> dict[str, Any]:
     db = _db()
     doc_ref = db.collection(PROFILES).document()
     payload = {
         "name": name.strip(),
         "admin_uid": admin_uid,
+        "relationship": (relationship or "").strip()[:40],
         "created_at": _utcnow(),
         "memory_version": 0,
         "handover_cache": None,
@@ -155,7 +158,7 @@ async def validate_caregiver_token(token: str, client_ip: str | None = None) -> 
     if locked_ip and client_ip and locked_ip != client_ip:
         raise FirestoreError(
             "This care link is already in use from another device. "
-            "Ask the parent to generate a new link."
+            "Ask your care admin to generate a new link."
         )
 
     doc_ref = db.collection(LINKS).document(snap.id)
@@ -210,7 +213,7 @@ async def set_handover_cache(profile_id: str, summary: str, version: int) -> Non
 
 
 async def get_emergency_card(profile_id: str) -> str | None:
-    """Return the parent-authored emergency card text, or None if not set."""
+    """Return the admin-written emergency card text, or None if not set."""
     db = _db()
     snap = db.collection(PROFILES).document(profile_id).get()
     data = snap.to_dict() or {}
@@ -218,7 +221,7 @@ async def get_emergency_card(profile_id: str) -> str | None:
 
 
 async def set_emergency_card(profile_id: str, content: str) -> None:
-    """Persist the parent-authored emergency card text."""
+    """Persist the admin-written emergency card text."""
     db = _db()
     db.collection(PROFILES).document(profile_id).update({
         "emergency_card": content.strip(),

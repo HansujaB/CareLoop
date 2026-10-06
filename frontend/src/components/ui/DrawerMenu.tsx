@@ -124,7 +124,7 @@ export function DrawerMenu({ visible, onClose }: Props) {
           </View>
           <View style={styles.headerInfo}>
             <Text style={styles.displayName} numberOfLines={1}>
-              {firebaseUser?.displayName || "Parent"}
+              {firebaseUser?.displayName || "Admin"}
             </Text>
             <Text style={styles.email} numberOfLines={1}>
               {firebaseUser?.email || ""}

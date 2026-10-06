@@ -9,6 +9,7 @@ type Role = "none" | "admin" | "caregiver";
 export type CareProfile = {
   profile_id: string;
   name: string;
+  relationship: string;
 };
 
 type SessionState = {
@@ -18,13 +19,14 @@ type SessionState = {
   profileId: string | null;
   profileName: string;
   profiles: CareProfile[];
+  profileRelationship: string;
   profileLoading: boolean;
   profileRecovering: boolean;  // true while Firestore UID lookup is in-flight
   caregiverToken: string | null;
   caregiverName: string | null;
   hasOnboarded: boolean;
   setRole: (role: Role) => void;
-  setProfile: (profileId: string, name: string) => void;
+  setProfile: (profileId: string, name: string, relationship?: string) => void;
   switchProfile: (profileId: string) => void;
   setCaregiverToken: (token: string) => void;
   setCaregiverName: (name: string) => void;
@@ -33,11 +35,12 @@ type SessionState = {
 };
 
 // Module-level helpers — stable references, no closure issues
-async function _persistProfile(id: string, name: string) {
+async function _persistProfile(id: string, name: string, relationship: string = "") {
   try {
     await AsyncStorage.multiSet([
       ["profileId", id],
       ["profileName", name],
+      ["profileRelationship", relationship],
     ]);
   } catch (e) {
     console.warn("[Session] AsyncStorage write failed:", e);
@@ -46,7 +49,7 @@ async function _persistProfile(id: string, name: string) {
 
 async function _clearProfile() {
   try {
-    await AsyncStorage.multiRemove(["profileId", "profileName"]);
+    await AsyncStorage.multiRemove(["profileId", "profileName", "profileRelationship"]);
   } catch { /* ignore */ }
 }
 
@@ -59,6 +62,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("");
   const [profiles, setProfiles] = useState<CareProfile[]>([]);
+  const [profileRelationship, setProfileRelationship] = useState("");
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileRecovering, setProfileRecovering] = useState(false);
   const [caregiverToken, setCaregiverToken] = useState<string | null>(null);
@@ -67,11 +71,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // 1. Restore active profileId from AsyncStorage on mount (static import — works reliably)
   useEffect(() => {
-    AsyncStorage.multiGet(["profileId", "profileName"])
-      .then(([[, id], [, name]]) => {
+    AsyncStorage.multiGet(["profileId", "profileName", "profileRelationship"])
+      .then(([[, id], [, name], [, relationship]]) => {
         if (id) {
           setProfileId(id);
           setProfileName(name ?? "");
+          setProfileRelationship(relationship ?? "");
         }
       })
       .catch((e) => console.warn("[Session] AsyncStorage read failed:", e))
@@ -90,6 +95,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setProfileId(null);
         setProfileName("");
         setProfiles([]);
+        setProfileRelationship("");
         _clearProfile();
       }
       setAuthLoading(false);
@@ -107,22 +113,29 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setProfileRecovering(true);
     api.getProfileByUid(firebaseUser.uid)
       .then((list) => {
-        const owned = list ?? [];
+        const owned = (list ?? []).map((p) => ({
+          profile_id: p.profile_id,
+          name: p.name,
+          relationship: p.relationship ?? "",
+        }));
         setProfiles(owned);
         const cached = owned.find((p) => p.profile_id === profileId);
         if (cached) {
-          // Still owned — sync the name in case it changed elsewhere
+          // Still owned — sync the name/relationship in case they changed elsewhere
           setProfileName(cached.name);
-          _persistProfile(cached.profile_id, cached.name);
+          setProfileRelationship(cached.relationship ?? "");
+          _persistProfile(cached.profile_id, cached.name, cached.relationship ?? "");
         } else if (owned.length > 0) {
           // Cached profile gone (or first login) — activate the first one
           setProfileId(owned[0].profile_id);
           setProfileName(owned[0].name);
-          _persistProfile(owned[0].profile_id, owned[0].name);
+          setProfileRelationship(owned[0].relationship ?? "");
+          _persistProfile(owned[0].profile_id, owned[0].name, owned[0].relationship ?? "");
         } else if (profileId) {
           // No profiles at all — clear stale cache, route to create-profile
           setProfileId(null);
           setProfileName("");
+          setProfileRelationship("");
           _clearProfile();
         }
       })
@@ -142,28 +155,31 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       profileId,
       profileName,
       profiles,
+      profileRelationship,
       profileLoading,
       profileRecovering,
       caregiverToken,
       caregiverName,
       hasOnboarded,
       setRole,
-      setProfile: (id, name) => {
+      setProfile: (id, name, relationship = "") => {
         setProfileId(id);
         setProfileName(name);
+        setProfileRelationship(relationship);
         setProfiles((prev) =>
           prev.some((p) => p.profile_id === id)
-            ? prev.map((p) => (p.profile_id === id ? { ...p, name } : p))
-            : [...prev, { profile_id: id, name }],
+            ? prev.map((p) => (p.profile_id === id ? { ...p, name, relationship } : p))
+            : [...prev, { profile_id: id, name, relationship }],
         );
-        _persistProfile(id, name); // fire-and-forget — in-memory state updates immediately
+        _persistProfile(id, name, relationship); // fire-and-forget — in-memory state updates immediately
       },
       switchProfile: (id) => {
         const target = profiles.find((p) => p.profile_id === id);
         if (!target) return;
         setProfileId(target.profile_id);
         setProfileName(target.name);
-        _persistProfile(target.profile_id, target.name);
+        setProfileRelationship(target.relationship ?? "");
+        _persistProfile(target.profile_id, target.name, target.relationship ?? "");
       },
       setCaregiverToken,
       setCaregiverName,
@@ -173,6 +189,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setProfileId(null);
         setProfileName("");
         setProfiles([]);
+        setProfileRelationship("");
         setCaregiverToken(null);
         setCaregiverName(null);
         setRole("none");
@@ -181,7 +198,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         await signOut();
       },
     }),
-    [role, firebaseUser, authLoading, profileId, profileName, profiles, profileLoading, profileRecovering, caregiverToken, caregiverName, hasOnboarded],
+    [role, firebaseUser, authLoading, profileId, profileName, profiles, profileRelationship, profileLoading, profileRecovering, caregiverToken, caregiverName, hasOnboarded],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

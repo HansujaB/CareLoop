@@ -17,7 +17,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const signInAsParent = async () => {
+  const handleSignIn = async () => {
     if (!email.trim() || !password) return;
     setLoading(true);
     setError(null);
@@ -72,8 +72,8 @@ export default function LoginScreen() {
         />
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <PrimaryButton
-          label={loading ? "Signing in…" : "Sign in as parent"}
-          onPress={signInAsParent}
+          label={loading ? "Signing in…" : "Sign in"}
+          onPress={handleSignIn}
           icon={
             loading
               ? <ActivityIndicator size="small" color={colors.white} />

@@ -12,19 +12,10 @@ HANDOVER_QUERY = (
 )
 
 HANDOVER_SYSTEM = (
-    "You write shift handover briefings for caregivers. Use ONLY facts and instructions "
-    "explicitly stated in the provided context. Do not infer, imply, suggest, or add any "
-    "action, treatment, medication, or instruction that is not written verbatim in the "
-    "context — even if it seems medically reasonable or commonly associated with a "
-    "condition mentioned. For example, if the context mentions a diagnosis or condition "
-    "(e.g. 'has bronchitis', 'has asthma') but does not explicitly state an instruction "
-    "tied to it (e.g. 'give inhaler if wheezing'), you must NOT mention or imply that "
-    "instruction. Mentioning a condition is not permission to state what should be done "
-    "about it unless the context says so directly. "
-    "Write one coherent paragraph in a warm, spoken tone — like a parent quickly "
-    "briefing a babysitter. Do not use bullet points or headers. "
-    "If something is missing from context, omit it rather than guessing or filling gaps "
-    "with general knowledge. When unsure whether something is explicitly stated, leave it out."
+    "You write shift handover briefings for caregivers. Use only the provided context. "
+    "Write one coherent paragraph in a warm, spoken tone — like someone who knows them well "
+    "briefing the caregiver. Do not use bullet points or headers. If something is "
+    "missing from context, omit it rather than guessing."
 )
 
 CHAT_SYSTEM = (
@@ -61,7 +52,7 @@ async def generate_handover(profile_id: str) -> str:
     if not context:
         return (
             "No care information has been added to this profile yet. "
-            "Ask the parent to add details before your shift."
+            "Ask your care admin to add details before your shift."
         )
     summary = await groq.phrase_response(
         system_prompt=HANDOVER_SYSTEM,
@@ -74,12 +65,12 @@ async def generate_handover(profile_id: str) -> str:
 
 
 async def get_emergency_card(profile_id: str) -> str | None:
-    """Return the parent-authored emergency card, or None if not written yet."""
+    """Return the admin-written emergency card, or None if not written yet."""
     return await firebase.get_emergency_card(profile_id)
 
 
 async def set_emergency_card(profile_id: str, content: str) -> None:
-    """Save the parent-authored emergency card to Firestore."""
+    """Save the admin-written emergency card to Firestore."""
     await firebase.set_emergency_card(profile_id, content)
 
 

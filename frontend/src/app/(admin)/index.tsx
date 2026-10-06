@@ -33,10 +33,10 @@ export default function AdminHomeScreen() {
       .finally(() => setLoading(false));
   }, [profileId, firebaseUser]);
 
-  const displayName = profileName || "your child";
+  const displayName = profileName || "your loved one";
 
   return (
-    <Screen navTitle={`Hi, ${displayName}'s parent`} navSubtitle="Care memory dashboard">
+    <Screen navTitle={`Care profile for ${displayName}`} navSubtitle="Care memory dashboard">
       <Card style={styles.profileCard} soft padding="md">
         <View style={styles.profileRow}>
           <View style={styles.profileText}>

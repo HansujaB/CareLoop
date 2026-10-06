@@ -5,7 +5,7 @@
  * The token is pre-filled from the URL. The caregiver enters their name,
  * which calls caregiverSession() to:
  *   1. Validate the token
- *   2. Write caregiver_name to Firestore (so the parent sees who logged in)
+ *   2. Write caregiver_name to Firestore (so the admin sees who logged in)
  *   3. Lock the IP on first use (subsequent logins from a different IP are blocked)
  *
  * If the token is missing we fall back to the manual welcome screen.
@@ -48,7 +48,7 @@ export default function CaregiverTokenEntry() {
 
   const enter = async () => {
     if (!name.trim()) {
-      setError("Please enter your name so the parent knows who's on shift.");
+      setError("Please enter your name so your care admin knows who's on shift.");
       return;
     }
     setSubmitting(true);
@@ -60,7 +60,7 @@ export default function CaregiverTokenEntry() {
       setCaregiverName(name.trim());
       router.replace("/(caregiver)/(tabs)/home");
     } catch (err: any) {
-      setError(err.message ?? "Invalid or revoked link. Ask the parent to generate a new one.");
+      setError(err.message ?? "Invalid or revoked link. Ask your care admin to generate a new one.");
     } finally {
       setSubmitting(false);
     }

@@ -3,11 +3,15 @@ from pydantic import BaseModel, Field
 
 class CreateProfileRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+    # Optional relationship of the admin to the person cared for
+    # (e.g. "daughter", "spouse", "nurse"). Display-only, never validated.
+    relationship: str = Field(default="", max_length=40)
 
 
 class ProfileResponse(BaseModel):
     profile_id: str
     name: str
+    relationship: str = ""
 
 
 class RememberTextRequest(BaseModel):

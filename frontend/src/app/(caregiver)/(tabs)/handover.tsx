@@ -44,7 +44,7 @@ export default function CaregiverHandoverScreen() {
           err?.message?.toLowerCase().includes("invalid");
         setError(
           isRevoked
-            ? "Your care link has been revoked. Please ask the parent for a new link."
+            ? "Your care link has been revoked. Please ask your care admin for a new link."
             : (err.message ?? "Failed to load handover."),
         );
         if (isRevoked) {
@@ -69,7 +69,7 @@ export default function CaregiverHandoverScreen() {
         onMenuPress={() => setDrawerOpen(true)}
       >
         <Text style={styles.lead}>
-          Your shift handover — synthesised from everything the parent has stored in care memory.
+          Your shift handover — synthesised from everything stored in care memory.
         </Text>
         {loading ? (
           <Card soft padding="md" style={styles.center}>
@@ -86,7 +86,7 @@ export default function CaregiverHandoverScreen() {
         ) : (
           <Card soft padding="md">
             <Text style={styles.emptyText}>
-              No care information available yet. Ask the parent to add details.
+              No care information available yet. Ask your care admin to add details.
             </Text>
           </Card>
         )}
