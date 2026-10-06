@@ -77,8 +77,8 @@ export default function CaregiverProfileScreen() {
           <View style={styles.noteRow}>
             <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
             <Text style={styles.noteText}>
-              Your token was provided by the parent via their CareLoop app.
-              If it becomes invalid, ask the parent to generate a new link.
+              Your token was provided by your care admin via their CareLoop app.
+              If it becomes invalid, ask them to generate a new link.
             </Text>
           </View>
         </Card>

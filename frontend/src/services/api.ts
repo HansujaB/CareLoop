@@ -93,15 +93,15 @@ export type CaregiverLink = {
 };
 
 export const api = {
-  createProfile: (name: string, uid: string) =>
-    request<{ profile_id: string; name: string }>("/profiles", {
+  createProfile: (name: string, uid: string, relationship?: string) =>
+    request<{ profile_id: string; name: string; relationship: string }>("/profiles", {
       method: "POST",
-      body: { name },
+      body: { name, relationship: relationship ?? "" },
       uid,
     }),
 
   getProfileByUid: (uid: string) =>
-    request<{ profile_id: string; name: string } | null>("/profiles/mine", {
+    request<{ profile_id: string; name: string; relationship: string } | null>("/profiles/mine", {
       uid,
     }),
 

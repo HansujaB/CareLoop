@@ -32,7 +32,7 @@ export default function CaregiverEmergencyScreen() {
       }
 
       // 2. Cache miss — fetch from backend (pure Firestore read, no LLM).
-      //    Returns whatever the parent last saved — deterministic and fast.
+      //    Returns whatever the admin last saved — deterministic and fast.
       try {
         const res = await api.caregiverEmergency(caregiverToken);
         setContent(res.content);
@@ -43,7 +43,7 @@ export default function CaregiverEmergencyScreen() {
           err?.message?.toLowerCase().includes("invalid");
         setError(
           isRevoked
-            ? "Your care link has been revoked. Please ask the parent for a new link."
+            ? "Your care link has been revoked. Please ask your care admin for a new link."
             : (err.message ?? "Failed to load emergency card."),
         );
         if (isRevoked) {
@@ -82,7 +82,7 @@ export default function CaregiverEmergencyScreen() {
         ) : (
           <Card soft padding="md">
             <Text style={styles.emptyText}>
-            The parent hasn't written an emergency card yet.
+            Your care admin hasn't written an emergency card yet.
             Ask them to fill it in from their CareLoop app.
           </Text>
           </Card>
