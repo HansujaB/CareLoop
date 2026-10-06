@@ -1,15 +1,15 @@
 /**
  * Local AsyncStorage cache for caregiver data that doesn't change unless
- * the parent adds a memory.
+ * the admin adds a memory.
  *
  * Strategy:
  *  - Each entry is stored with a `fetchedAt` timestamp.
  *  - TTL is 4 hours. Within TTL: serve from AsyncStorage, no network call.
  *  - After TTL (or on end-shift / revoked-token): clear cache and re-fetch.
  *  - The backend uses its own memory_version–based cache, so even a cache miss
- *    here is usually instant (no Groq call) unless the parent has added new
+ *    here is usually instant (no Groq call) unless the admin has added new
  *    memories since the last generation.
- *  - When the parent calls remember(), the backend bumps memory_version which
+ *  - When the admin adds a memory, the backend bumps memory_version which
  *    invalidates its server-side cache. The next fetch from any caregiver will
  *    trigger a fresh Groq generation and the frontend cache will be updated.
  *

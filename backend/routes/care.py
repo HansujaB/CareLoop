@@ -56,7 +56,7 @@ async def set_emergency(
     body: SetEmergencyCardRequest,
     _profile: dict = Depends(require_owned_profile),
 ) -> EmergencyCardResponse:
-    """Parent-only: write (or overwrite) the emergency card."""
+    """Admin-only: write (or overwrite) the emergency card."""
     try:
         await care_memory.set_emergency_card(profile_id, body.content)
     except FirestoreError as exc:

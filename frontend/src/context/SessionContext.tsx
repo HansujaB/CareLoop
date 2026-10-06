@@ -12,13 +12,14 @@ type SessionState = {
   authLoading: boolean;
   profileId: string | null;
   profileName: string;
+  profileRelationship: string;
   profileLoading: boolean;
   profileRecovering: boolean;  // true while Firestore UID lookup is in-flight
   caregiverToken: string | null;
   caregiverName: string | null;
   hasOnboarded: boolean;
   setRole: (role: Role) => void;
-  setProfile: (profileId: string, name: string) => void;
+  setProfile: (profileId: string, name: string, relationship?: string) => void;
   setCaregiverToken: (token: string) => void;
   setCaregiverName: (name: string) => void;
   completeOnboarding: () => void;
@@ -26,11 +27,12 @@ type SessionState = {
 };
 
 // Module-level helpers — stable references, no closure issues
-async function _persistProfile(id: string, name: string) {
+async function _persistProfile(id: string, name: string, relationship: string = "") {
   try {
     await AsyncStorage.multiSet([
       ["profileId", id],
       ["profileName", name],
+      ["profileRelationship", relationship],
     ]);
   } catch (e) {
     console.warn("[Session] AsyncStorage write failed:", e);
@@ -39,7 +41,7 @@ async function _persistProfile(id: string, name: string) {
 
 async function _clearProfile() {
   try {
-    await AsyncStorage.multiRemove(["profileId", "profileName"]);
+    await AsyncStorage.multiRemove(["profileId", "profileName", "profileRelationship"]);
   } catch { /* ignore */ }
 }
 
@@ -51,6 +53,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role>("none");
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("");
+  const [profileRelationship, setProfileRelationship] = useState("");
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileRecovering, setProfileRecovering] = useState(false);
   const [caregiverToken, setCaregiverToken] = useState<string | null>(null);
@@ -59,11 +62,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // 1. Restore profileId from AsyncStorage on mount (static import — works reliably)
   useEffect(() => {
-    AsyncStorage.multiGet(["profileId", "profileName"])
-      .then(([[, id], [, name]]) => {
+    AsyncStorage.multiGet(["profileId", "profileName", "profileRelationship"])
+      .then(([[, id], [, name], [, relationship]]) => {
         if (id) {
           setProfileId(id);
           setProfileName(name ?? "");
+          setProfileRelationship(relationship ?? "");
         }
       })
       .catch((e) => console.warn("[Session] AsyncStorage read failed:", e))
@@ -104,7 +108,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           if (profile.profile_id !== profileId) {
             setProfileId(profile.profile_id);
             setProfileName(profile.name);
-            _persistProfile(profile.profile_id, profile.name);
+            setProfileRelationship(profile.relationship ?? "");
+            _persistProfile(profile.profile_id, profile.name, profile.relationship ?? "");
           }
         } else {
           // No profile found for this UID — clear any stale cached profile
@@ -112,6 +117,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           if (profileId) {
             setProfileId(null);
             setProfileName("");
+            setProfileRelationship("");
             _clearProfile();
           }
         }
@@ -131,16 +137,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       authLoading,
       profileId,
       profileName,
+      profileRelationship,
       profileLoading,
       profileRecovering,
       caregiverToken,
       caregiverName,
       hasOnboarded,
       setRole,
-      setProfile: (id, name) => {
+      setProfile: (id, name, relationship = "") => {
         setProfileId(id);
         setProfileName(name);
-        _persistProfile(id, name); // fire-and-forget — in-memory state updates immediately
+        setProfileRelationship(relationship);
+        _persistProfile(id, name, relationship); // fire-and-forget — in-memory state updates immediately
       },
       setCaregiverToken,
       setCaregiverName,
@@ -149,6 +157,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // Clear in-memory state first so nothing stale is visible during sign-out
         setProfileId(null);
         setProfileName("");
+        setProfileRelationship("");
         setCaregiverToken(null);
         setCaregiverName(null);
         setRole("none");
@@ -157,7 +166,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         await signOut();
       },
     }),
-    [role, firebaseUser, authLoading, profileId, profileName, profileLoading, profileRecovering, caregiverToken, caregiverName, hasOnboarded],
+    [role, firebaseUser, authLoading, profileId, profileName, profileRelationship, profileLoading, profileRecovering, caregiverToken, caregiverName, hasOnboarded],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

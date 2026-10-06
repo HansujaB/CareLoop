@@ -16,10 +16,18 @@ async def create_profile(
     if not x_firebase_uid:
         raise HTTPException(status_code=401, detail="X-Firebase-UID header required.")
     try:
-        profile = await firebase.create_profile(name=body.name, admin_uid=x_firebase_uid)
+        profile = await firebase.create_profile(
+            name=body.name,
+            admin_uid=x_firebase_uid,
+            relationship=body.relationship,
+        )
     except FirestoreError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return ProfileResponse(profile_id=profile["profile_id"], name=profile["name"])
+    return ProfileResponse(
+        profile_id=profile["profile_id"],
+        name=profile["name"],
+        relationship=profile.get("relationship", ""),
+    )
 
 
 @router.get("/mine", response_model=ProfileResponse | None)
@@ -32,7 +40,11 @@ async def get_my_profile(
     profile = await firebase.get_profile_by_uid(x_firebase_uid)
     if not profile:
         return None
-    return ProfileResponse(profile_id=profile["profile_id"], name=profile["name"])
+    return ProfileResponse(
+        profile_id=profile["profile_id"],
+        name=profile["name"],
+        relationship=profile.get("relationship", ""),
+    )
 
 
 @router.get("/{profile_id}", response_model=ProfileResponse)
@@ -40,4 +52,8 @@ async def get_profile(
     profile_id: str,
     profile: dict = Depends(require_owned_profile),
 ) -> ProfileResponse:
-    return ProfileResponse(profile_id=profile["profile_id"], name=profile["name"])
+    return ProfileResponse(
+        profile_id=profile["profile_id"],
+        name=profile["name"],
+        relationship=profile.get("relationship", ""),
+    )

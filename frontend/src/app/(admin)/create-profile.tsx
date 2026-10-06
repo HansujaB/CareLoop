@@ -12,6 +12,7 @@ import { colors, spacing, typography } from "@/constants/theme";
 export default function CreateProfileScreen() {
   const { setProfile, firebaseUser } = useSession();
   const [name, setName] = useState("");
+  const [relationship, setRelationship] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,8 +21,12 @@ export default function CreateProfileScreen() {
     setCreating(true);
     setError(null);
     try {
-      const profile = await api.createProfile(name.trim(), firebaseUser?.uid ?? "");
-      setProfile(profile.profile_id, profile.name);
+      const profile = await api.createProfile(
+        name.trim(),
+        firebaseUser?.uid ?? "",
+        relationship.trim(),
+      );
+      setProfile(profile.profile_id, profile.name, profile.relationship ?? "");
       router.replace("/(admin)/memory");
     } catch (err: any) {
       setError(err.message ?? "Failed to create profile. Try again.");
@@ -35,11 +40,17 @@ export default function CreateProfileScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Create care profile</Text>
         <Text style={styles.subtitle}>
-          One profile per child or dependent. Their care knowledge lives here.
+          One profile per person you care for. Their care knowledge lives here.
         </Text>
       </View>
 
-      <TextField label="Name" value={name} onChangeText={setName} placeholder="Your child's name" />
+      <TextField label="Name" value={name} onChangeText={setName} placeholder="Their name" />
+      <TextField
+        label="Your relationship to them (optional)"
+        value={relationship}
+        onChangeText={setRelationship}
+        placeholder="e.g. daughter, spouse, nurse"
+      />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 

@@ -6,7 +6,7 @@ The original file is NOT stored to Firebase Storage (out of scope for the
 demo — Storage SDK adds setup overhead).  What IS stored:
   - The extracted (cleaned) text in Mem0 under the profile's user_id
   - A Firestore record on the profile doc: { uploads: [...] } (last 20)
-    so the parent can see upload history and status.
+    so the admin can see upload history and status.
 
 If OCR fails the upload is still acknowledged \u2014 the error is logged
 and returned so the UI can surface a "processing failed" state.

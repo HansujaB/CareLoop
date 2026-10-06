@@ -1,7 +1,7 @@
 /**
- * Emergency card editor — parent-facing.
+ * Emergency card editor — admin-facing.
  *
- * The parent writes the card directly. What they type is exactly what
+ * The admin writes the card directly. What they type is exactly what
  * caregivers see. No LLM involved — deterministic, always accurate.
  *
  * Stored in Firestore under profiles/{id}.emergency_card.

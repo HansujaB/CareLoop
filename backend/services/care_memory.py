@@ -14,8 +14,8 @@ HANDOVER_QUERY = (
 
 HANDOVER_SYSTEM = (
     "You write shift handover briefings for caregivers. Use only the provided context. "
-    "Write one coherent paragraph in a warm, spoken tone — like a parent quickly "
-    "briefing a babysitter. Do not use bullet points or headers. If something is "
+    "Write one coherent paragraph in a warm, spoken tone — like someone who knows them well "
+    "briefing the caregiver. Do not use bullet points or headers. If something is "
     "missing from context, omit it rather than guessing."
 )
 
@@ -53,7 +53,7 @@ async def generate_handover(profile_id: str) -> str:
     if not context:
         return (
             "No care information has been added to this profile yet. "
-            "Ask the parent to add details before your shift."
+            "Ask your care admin to add details before your shift."
         )
     summary = await groq.phrase_response(
         system_prompt=HANDOVER_SYSTEM,
@@ -66,10 +66,10 @@ async def generate_handover(profile_id: str) -> str:
 
 
 async def get_emergency_card(profile_id: str) -> str | None:
-    """Return the parent-authored emergency card, or None if not written yet."""
+    """Return the admin-written emergency card, or None if not written yet."""
     return await firebase.get_emergency_card(profile_id)
 
 
 async def set_emergency_card(profile_id: str, content: str) -> None:
-    """Save the parent-authored emergency card to Firestore."""
+    """Save the admin-written emergency card to Firestore."""
     await firebase.set_emergency_card(profile_id, content)

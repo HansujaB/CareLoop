@@ -19,8 +19,8 @@ export default function AdminProfileScreen() {
             <Text style={styles.avatarText}>P</Text>
           </View>
           <View>
-            <Text style={styles.name}>Parent account</Text>
-            <Text style={styles.meta}>Managing {profileName}</Text>
+            <Text style={styles.name}>Care admin</Text>
+            <Text style={styles.meta}>Managing care for {profileName}</Text>
           </View>
         </View>
       </Card>

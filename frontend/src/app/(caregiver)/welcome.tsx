@@ -50,7 +50,7 @@ export default function CaregiverWelcomeScreen() {
       return;
     }
     if (!token.trim()) {
-      setError("Please paste the care link token from the parent.");
+      setError("Please paste the care link token from your care admin.");
       return;
     }
     setSubmitting(true);
@@ -89,7 +89,7 @@ export default function CaregiverWelcomeScreen() {
         <IllustrationHero
           icon="hand-left-outline"
           title="You're covering a shift"
-          subtitle="Enter your name and paste the care link token the parent shared with you."
+          subtitle="Enter your name and paste the care link token your care admin shared with you."
         />
 
         <View style={styles.form}>
@@ -103,10 +103,10 @@ export default function CaregiverWelcomeScreen() {
             label="Care link token"
             value={token}
             onChangeText={setToken}
-            placeholder="Paste token from parent's shared link"
+            placeholder="Paste token from your care admin's shared link"
             autoCapitalize="none"
             autoCorrect={false}
-            hint="Tap 'Share' on the parent's Caregiver links screen to copy your token."
+            hint="Tap 'Share' on your care admin's Caregiver links screen to copy your token."
           />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}

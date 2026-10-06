@@ -1,8 +1,8 @@
 /**
- * Medical record upload screen (admin / parent only).
+ * Medical record upload screen (admin only).
  *
  * Flow:
- *   1. Parent taps "Choose file" → expo-document-picker opens Files app
+ *   1. Admin taps "Choose file" → expo-document-picker opens Files app
  *   2. File is validated client-side (type + size)
  *   3. XHR multipart POST to /profiles/{id}/upload
  *   4. Backend runs OCR (PDF → pypdf, image → Groq vision) then Groq cleanup

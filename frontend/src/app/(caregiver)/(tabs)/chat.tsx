@@ -72,7 +72,7 @@ export default function CaregiverChatScreen() {
           id: `${Date.now()}-err`,
           role: "assistant",
           text: isRevoked
-            ? "Your care link has been revoked. Please ask the parent for a new link."
+            ? "Your care link has been revoked. Please ask your care admin for a new link."
             : "Sorry, couldn't reach the care memory right now. Please try again.",
         },
       ]);
