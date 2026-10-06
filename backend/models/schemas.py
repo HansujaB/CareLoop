@@ -49,7 +49,7 @@ class CaregiverLinkResponse(BaseModel):
     url: str
     status: str
     caregiver_name: str | None = None
-    locked_ip: str | None = None
+    locked_device_id: str | None = None
 
 
 class CaregiverSessionRequest(BaseModel):

@@ -115,7 +115,7 @@ export default function LinksScreen() {
               </View>
               <View style={styles.activeBadge}>
                 <Text style={styles.activeText}>
-                  {link.locked_ip ? "In use" : "Active"}
+                  {link.locked_device_id ? "In use" : "Active"}
                 </Text>
               </View>
             </View>
